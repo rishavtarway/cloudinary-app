@@ -20,7 +20,7 @@ model Video {
   publicId       String? // from cloudinary
   originalSize   String // from cloudinary
   compressedSize String // from cloudinary
-  duration       String
+  duration       Float
   createdAt      DateTime @default(now())
   updatedAt      DateTime @default(now())
 }
