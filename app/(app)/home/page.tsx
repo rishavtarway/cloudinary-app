@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import VideoCard from "@/components/VideoCard";
 
-
 interface Video {
   id: string;
   title: string;
@@ -14,33 +13,28 @@ interface Video {
   originalSize: number;
   compressedSize: number;
 }
+
 function Home() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchVideos = useCallback(async () => {
-    let isMounted = true;
     try {
       const response = await axios.get("/api/videos");
-      if (Array.isArray(response.data) && isMounted) {
-        setVideos(response.data);
+      if (Array.isArray(response.data.videos)) {
+        setVideos(response.data.videos);
       } else {
-        // throw new Error("Unexpected response format");
-        console.log("Unexpected response format");
-        
+        console.error("Unexpected response format", response.data);
+        setError("Unexpected response format");
       }
     } catch (err) {
       console.error(err);
-      if (isMounted) setError("Failed to fetch videos");
+      setError("Failed to fetch videos");
     } finally {
-      if (isMounted) setLoading(false);
+      setLoading(false);
     }
-    return () => {
-      isMounted = false;
-    };
   }, []);
-    
 
   useEffect(() => {
     fetchVideos();
@@ -60,6 +54,10 @@ function Home() {
     return <div>Loading...</div>;
   }
 
+  if (error) {
+    return <div className="text-red-500 text-center">{error}</div>;
+  }
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Videos</h1>
@@ -70,7 +68,11 @@ function Home() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {videos.map((video) => (
-            <VideoCard key={video.id} video={video} onDownload={handleDownload} />
+            <VideoCard
+              key={video.id}
+              video={video}
+              onDownload={handleDownload}
+            />
           ))}
         </div>
       )}
