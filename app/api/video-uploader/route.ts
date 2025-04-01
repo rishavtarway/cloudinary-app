@@ -3,13 +3,13 @@ import { v2 as cloudinary } from "cloudinary";
 import { auth } from "@clerk/nextjs/server";
 import { PrismaClient } from "@prisma/client";
 
-const globalForPrisma = global as unknown as { prisma?: PrismaClient };
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+// const globalForPrisma = global as unknown as { prisma?: PrismaClient };
+// export const prisma = globalForPrisma.prisma ?? new PrismaClient();
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
-console.log("Current NODE_ENV:", process.env.NODE_ENV);
+// if (process.env.NODE_ENV !== "production") {
+//   globalForPrisma.prisma = prisma;
+// }
+// console.log("Current NODE_ENV:", process.env.NODE_ENV);
 
 // Cloudinary Configuration
 cloudinary.config({
@@ -22,10 +22,12 @@ interface CloudinaryUploadResult {
   public_id: string;
   bytes: number;
   duration?: number;
-  [key: string]: any
+  [key: string]: string | number | undefined;
+  // [key: string]: any
 }
 
 export async function POST(request: NextRequest) {
+  const prisma = new PrismaClient();
   try {
     // Authenticate user
     const { userId } = await auth();

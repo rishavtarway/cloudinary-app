@@ -59,13 +59,26 @@ const VideoUpload = () => {
 
       console.log("API Response:", response.data);
       router.push("/");
-    } catch (error: any) {
+    } catch (error: unknown) { // any
       console.error("Upload error:", error);
-      setError(
-        error.response?.data?.error ||
+      // setError(
+      //   error.response?.data?.error ||
+      //     error.message ||
+      //     "An error occurred during upload."
+      // );
+      if (axios.isAxiosError(error)) {
+        // If error is an Axios error, extract the message
+        setError(
+          error.response?.data?.error ||
           error.message ||
           "An error occurred during upload."
-      );
+        );
+      } else if (error instanceof Error) {
+        // If error is a generic JavaScript error
+        setError(error.message);
+      } else {
+        setError("An unknown error occurred.");
+      }
     } finally {
       setIsUploading(false);
     }
