@@ -2,34 +2,52 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { useApiError, getErrorMessage } from "@/hooks/useApiError";
 
 const VideoUpload = () => {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { error, isLoading, executeWithErrorHandling, clearError } =
+    useApiError();
 
   // Max file size: 60 MB
   const MAX_FILE_SIZE = 60 * 1024 * 1024;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    clearError();
 
+    // Client-side validation
     if (!file) {
-      setError("Please select a file");
+      executeWithErrorHandling(() => {
+        throw new Error("Please select a video file to upload");
+      });
       return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setError(`File size too large (Max ${MAX_FILE_SIZE / (1024 * 1024)}MB)`);
+      executeWithErrorHandling(() => {
+        throw new Error(
+          `File size (${(file.size / (1024 * 1024)).toFixed(
+            2
+          )}MB) exceeds maximum allowed size (${
+            MAX_FILE_SIZE / (1024 * 1024)
+          }MB)`
+        );
+      });
       return;
     }
 
-    setIsUploading(true);
+    if (!title.trim()) {
+      executeWithErrorHandling(() => {
+        throw new Error("Please provide a title for your video");
+      });
+      return;
+    }
+
     setUploadProgress(0);
 
     const formData = new FormData();
@@ -45,7 +63,7 @@ const VideoUpload = () => {
       description,
     });
 
-    try {
+    const result = await executeWithErrorHandling(async () => {
       const response = await axios.post("/api/video-uploader", formData, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (progressEvent) => {
@@ -58,29 +76,12 @@ const VideoUpload = () => {
       });
 
       console.log("API Response:", response.data);
-      router.push("/");
-    } catch (error: unknown) { // any
-      console.error("Upload error:", error);
-      // setError(
-      //   error.response?.data?.error ||
-      //     error.message ||
-      //     "An error occurred during upload."
-      // );
-      if (axios.isAxiosError(error)) {
-        // If error is an Axios error, extract the message
-        setError(
-          error.response?.data?.error ||
-          error.message ||
-          "An error occurred during upload."
-        );
-      } else if (error instanceof Error) {
-        // If error is a generic JavaScript error
-        setError(error.message);
-      } else {
-        setError("An unknown error occurred.");
-      }
-    } finally {
-      setIsUploading(false);
+      return response.data;
+    });
+
+    if (result) {
+      // Success - redirect to home page
+      router.push("/home");
     }
   };
 
@@ -90,8 +91,14 @@ const VideoUpload = () => {
         <h1 className="text-2xl font-bold mb-4">Upload Video</h1>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+          <div className="alert alert-error mb-4">
+            <div>
+              <h3 className="font-bold">Upload Failed</h3>
+              <div className="text-sm">{getErrorMessage(error)}</div>
+            </div>
+            <button className="btn btn-sm btn-outline" onClick={clearError}>
+              Dismiss
+            </button>
           </div>
         )}
 
@@ -139,7 +146,7 @@ const VideoUpload = () => {
             )}
           </div>
 
-          {isUploading && (
+          {isLoading && (
             <div>
               <progress
                 className="progress progress-primary w-full"
@@ -153,9 +160,9 @@ const VideoUpload = () => {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={isUploading}
+            disabled={isLoading}
           >
-            {isUploading ? `Uploading... ${uploadProgress}%` : "Upload Video"}
+            {isLoading ? `Uploading... ${uploadProgress}%` : "Upload Video"}
           </button>
         </form>
       </div>

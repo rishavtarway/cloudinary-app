@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
 import Image from "next/image";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 import {
   LogOutIcon,
@@ -74,8 +75,8 @@ export default function AppLayout({
                   <div className="avatar">
                     <div className="w-8 h-8 rounded-full">
                       <Image
-                       width={40}  // Set a width for the image
-                       height={40} 
+                        width={40} // Set a width for the image
+                        height={40}
                         src={user.imageUrl}
                         alt={
                           user.username || user.emailAddresses[0].emailAddress
@@ -100,7 +101,7 @@ export default function AppLayout({
         {/* Page content */}
         <main className="flex-grow">
           <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 my-8">
-            {children}
+            <ErrorBoundary>{children}</ErrorBoundary>
           </div>
         </main>
       </div>

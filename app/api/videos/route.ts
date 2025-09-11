@@ -1,30 +1,56 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { auth } from "@clerk/nextjs/server";
+import {
+  ErrorTypes,
+  createSuccessResponse,
+  handleApiError,
+  AppError,
+} from "@/lib/error-handler";
+
 const prisma = new PrismaClient();
 
 export async function GET() {
   try {
-    const { userId } = await auth(); // Ensure this is awaited
-
+    // Authenticate user
+    const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(handleApiError(ErrorTypes.UNAUTHORIZED), {
+        status: ErrorTypes.UNAUTHORIZED.statusCode,
+      });
     }
 
+    // Fetch user's videos
     const videos = await prisma.video.findMany({
-        where: { userId },
+      where: { userId },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json(
-        { message: "Videos fetched successfully", videos },
-        { status: 200 }
+
+    // Return success response
+    const response = createSuccessResponse(
+      { videos },
+      "Videos fetched successfully"
     );
+
+    return NextResponse.json(response, { status: 200 });
   } catch (error) {
     console.error("Error fetching videos:", error);
-    return NextResponse.json(
-        { error: "Error while fetching videos" },
-        { status: 500 }
-    );
+
+    // Handle database errors specifically
+    if (error instanceof Error && error.message.includes("prisma")) {
+      const dbError = new AppError(
+        "Failed to retrieve videos from database",
+        500,
+        "DATABASE_ERROR"
+      );
+      const errorResponse = handleApiError(dbError);
+      return NextResponse.json(errorResponse, { status: 500 });
+    }
+
+    const errorResponse = handleApiError(error);
+    return NextResponse.json(errorResponse, {
+      status: error instanceof AppError ? error.statusCode : 500,
+    });
   } finally {
     await prisma.$disconnect();
   }

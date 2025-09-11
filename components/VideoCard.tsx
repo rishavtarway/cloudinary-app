@@ -80,6 +80,9 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload }) => {
   }, [isHovered]);
 
   const handlePreviewError = () => {
+    console.warn(
+      `Preview failed for video: ${video.title} (${video.publicId})`
+    );
     setPreviewError(true);
   };
 
@@ -98,8 +101,13 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload }) => {
       <figure className="aspect-video relative">
         {isHovered ? (
           previewError ? (
-            <div className="w-full h-full flex items-center justify-center bg-gray-200">
-              <p className="text-red-500">Preview not available</p>
+            <div className="w-full h-full flex items-center justify-center bg-base-300">
+              <div className="text-center">
+                <p className="text-error text-sm">Preview unavailable</p>
+                <p className="text-xs text-base-content opacity-60 mt-1">
+                  Click to view full video
+                </p>
+              </div>
             </div>
           ) : (
             <video
@@ -116,6 +124,12 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload }) => {
             src={video.publicId ? getThumbnailUrl(video.publicId) : ""}
             alt={video.title}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              console.warn(
+                `Thumbnail failed for video: ${video.title} (${video.publicId})`
+              );
+              e.currentTarget.src = "/placeholder-video.png"; // Fallback image
+            }}
           />
         )}
         <div className="absolute bottom-2 right-2 bg-base-100 bg-opacity-70 px-2 py-1 rounded-lg text-sm flex items-center">
