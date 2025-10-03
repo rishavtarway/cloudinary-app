@@ -34,7 +34,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload }) => {
       height: 225,
       crop: "fill",
       gravity: "auto",
-      format: "jpg",
+      format: "auto",
       quality: "auto",
       assetType: "video",
     });
@@ -117,6 +117,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload }) => {
               loop
               className="w-full h-full object-cover"
               onError={handlePreviewError}
+              loading="lazy" // Add this attribute
             />
           )
         ) : (
@@ -124,6 +125,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload }) => {
             src={video.publicId ? getThumbnailUrl(video.publicId) : ""}
             alt={video.title}
             className="w-full h-full object-cover"
+            loading="lazy" // Add this attribute
             onError={(e) => {
               console.warn(
                 `Thumbnail failed for video: ${video.title} (${video.publicId})`
