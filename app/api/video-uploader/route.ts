@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { auth } from "@clerk/nextjs/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import {
   ErrorTypes,
   validateFileUpload,
@@ -27,7 +27,6 @@ interface CloudinaryUploadResult {
 }
 
 export async function POST(request: NextRequest) {
-  const prisma = new PrismaClient();
 
   try {
     // Authenticate user
