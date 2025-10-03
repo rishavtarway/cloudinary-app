@@ -26,6 +26,9 @@ interface CloudinaryUploadResult {
   [key: string]: string | number | undefined;
 }
 
+// Add allowed video types
+const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/x-matroska"];
+
 export async function POST(request: NextRequest) {
 
   try {
@@ -51,7 +54,7 @@ export async function POST(request: NextRequest) {
     validateRequiredFields({ file, title, originalSize });
 
     // Validate file (max 60MB for videos)
-    validateFileUpload(file, 60 * 1024 * 1024);
+    validateFileUpload(file, 60 * 1024 * 1024, ALLOWED_VIDEO_TYPES);
 
     // Convert file to buffer for Cloudinary upload
     const bytes = await file!.arrayBuffer();

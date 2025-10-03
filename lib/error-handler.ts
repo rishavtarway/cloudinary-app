@@ -144,11 +144,20 @@ export function handleApiError(error: unknown): ApiErrorResponse {
 // Validation helpers
 export function validateFileUpload(
   file: File | null,
-  maxSize: number = 60 * 1024 * 1024
+  maxSize: number = 60 * 1024 * 1024, allowedTypes: string[] = []
 ): void {
   if (!file) {
     throw ErrorTypes.MISSING_FILE;
   }
+
+    // Check for allowed file types
+    if (allowedTypes.length > 0 && !allowedTypes.includes(file.type)) {
+      throw new AppError(
+        `Invalid file type. Only ${allowedTypes.join(", ")} are allowed.`,
+        400,
+        "INVALID_FILE_TYPE"
+      );
+    }
 
   if (file.size > maxSize) {
     throw new AppError(

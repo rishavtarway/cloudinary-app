@@ -22,6 +22,9 @@ interface CloudinaryUploadResult {
   [key: string]: string | number | undefined;
 }
 
+// Add allowed image types
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
 export async function POST(request: NextRequest) {
   try {
     // Authenticate user
@@ -40,7 +43,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File | null;
 
     // Validate file (max 10MB for images)
-    validateFileUpload(file, 10 * 1024 * 1024);
+    validateFileUpload(file, 10 * 1024 * 1024, ALLOWED_IMAGE_TYPES);
 
     // Convert file to buffer
     const bytes = await file!.arrayBuffer();
