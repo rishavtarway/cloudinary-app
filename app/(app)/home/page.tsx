@@ -15,8 +15,11 @@ interface Video {
   compressedSize: number;
 }
 
+type ThumbnailSize = 'small' | 'medium' | 'large';
+
 function Home() {
   const [videos, setVideos] = useState<Video[]>([]);
+  const [thumbnailSize, setThumbnailSize] = useState<ThumbnailSize>('medium'); // Add state for size
   const { error, isLoading, executeWithErrorHandling, clearError } =
     useApiError();
 
@@ -85,19 +88,47 @@ function Home() {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Videos</h1>
+<div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Videos</h1>
+        {/* Add View Size Controls */}
+        <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium">View:</span>
+            <div className="join">
+                <button 
+                    className={`join-item btn btn-sm ${thumbnailSize === 'small' ? 'btn-active' : ''}`}
+                    onClick={() => setThumbnailSize('small')}>
+                    Small
+                </button>
+                <button 
+                    className={`join-item btn btn-sm ${thumbnailSize === 'medium' ? 'btn-active' : ''}`}
+                    onClick={() => setThumbnailSize('medium')}>
+                    Medium
+                </button>
+                <button 
+                    className={`join-item btn btn-sm ${thumbnailSize === 'large' ? 'btn-active' : ''}`}
+                    onClick={() => setThumbnailSize('large')}>
+                    Large
+                </button>
+            </div>
+        </div>
+      </div>
       {videos.length === 0 ? (
         <div className="text-center text-lg text-gray-500">
           No videos available
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className={`grid gap-6 ${
+            thumbnailSize === 'small' ? 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-6' : 
+            thumbnailSize === 'medium' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 
+            'grid-cols-1 sm:grid-cols-1 lg:grid-cols-2'
+        }`}>
           {videos.map((video) => (
             <VideoCard
               key={video.id}
               video={video}
               onDownload={handleDownload}
+              thumbnailSize={thumbnailSize} // Pass the size prop
             />
           ))}
         </div>

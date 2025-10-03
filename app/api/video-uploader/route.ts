@@ -69,6 +69,13 @@ export async function POST(request: NextRequest) {
             resource_type: "video",
              // This is the updated part for AI optimization
             transformation: [{ quality: "auto:good", fetch_format: "auto" }],
+            // This is the new part for auto-generating thumbnails
+            eager: [
+              { width: 150, height: 100, crop: "fill", gravity: "auto", format: "jpg", quality: "auto" },
+              { width: 400, height: 225, crop: "fill", gravity: "auto", format: "jpg", quality: "auto" },
+              { width: 800, height: 450, crop: "fill", gravity: "auto", format: "jpg", quality: "auto" }
+            ],
+            eager_async: true,
           },
           (error, result) => {
             if (error) {

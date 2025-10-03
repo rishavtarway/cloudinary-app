@@ -18,27 +18,36 @@ interface Video {
   compressedSize: number;
 }
 
+// Define thumbnail size options
+const thumbnailSizes = {
+  small: { width: 150, height: 100 },
+  medium: { width: 400, height: 225 },
+  large: { width: 800, height: 450 },
+};
+
 interface VideoCardProps {
   video: Video;
   onDownload?: (url: string, title: string) => void;
+  thumbnailSize?: keyof typeof thumbnailSizes; // Add this new prop
 }
 
-const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload }) => {
+const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, thumbnailSize = 'medium' }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [previewError, setPreviewError] = useState(false);
 
   const getThumbnailUrl = useCallback((publicId: string) => {
+    const { width, height } = thumbnailSizes[thumbnailSize];
     return getCldImageUrl({
       src: publicId,
-      width: 400,
-      height: 225,
+      width,
+      height,
       crop: "fill",
       gravity: "auto",
-      format: "auto",
+      format: "jpg",
       quality: "auto",
       assetType: "video",
     });
-  }, []);
+  }, [thumbnailSize]);
 
   const getFullVideoUrl = useCallback((publicId: string) => {
     return getCldVideoUrl({
