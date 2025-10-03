@@ -3,7 +3,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import VideoCard from "@/components/VideoCard";
 import { useApiError, getErrorMessage } from "@/hooks/useApiError";
-import { Search, List, Grid, LayoutGrid, Film } from "lucide-react";
+import { Search, List, Grid, LayoutGrid, Film, HardDrive, FileDown, Clock } from "lucide-react";
+import { filesize } from "filesize";
 
 interface Video {
   id: string;
@@ -16,35 +17,79 @@ interface Video {
   compressedSize: number;
 }
 
+interface Stats {
+  totalVideos: number;
+  totalOriginalSize: number;
+  totalCompressedSize: number;
+  totalDuration: number;
+}
+
 type ThumbnailSize = 'small' | 'medium' | 'large';
+
+const StatCard = ({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string | number;
+  color: string;
+}) => (
+  <div className="card bg-base-200 shadow-xl">
+    <div className="card-body">
+      <div className="flex items-center space-x-4">
+        <div className={`p-3 rounded-full bg-${color}-500 text-white`}>
+          <Icon className="w-6 h-6" />
+        </div>
+        <div>
+          <div className="text-lg font-semibold">{value}</div>
+          <div className="text-sm text-gray-500">{label}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 function Home() {
   const [videos, setVideos] = useState<Video[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [thumbnailSize, setThumbnailSize] = useState<ThumbnailSize>('medium');
   const { error, isLoading, executeWithErrorHandling, clearError } =
     useApiError();
 
-  const fetchVideos = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     const result = await executeWithErrorHandling(async () => {
-      const response = await axios.get("/api/videos");
+      const [videosResponse, statsResponse] = await Promise.all([
+        axios.get("/api/videos"),
+        axios.get("/api/user/statistics"),
+      ]);
 
-      if (response.data.success && Array.isArray(response.data.data.videos)) {
-        return response.data.data.videos;
-      } else if (Array.isArray(response.data.videos)) {
-        return response.data.videos;
-      } else {
-        throw new Error("Unexpected response format from server");
+      const videos = videosResponse.data.success
+        ? videosResponse.data.data.videos
+        : videosResponse.data.videos;
+
+      const stats = statsResponse.data.success
+        ? statsResponse.data.data
+        : statsResponse.data;
+
+      if (!Array.isArray(videos)) {
+        throw new Error("Unexpected video response format from server");
       }
+
+      return { videos, stats };
     });
 
     if (result) {
-      setVideos(result);
+      setVideos(result.videos);
+      setStats(result.stats);
     }
   }, [executeWithErrorHandling]);
 
   useEffect(() => {
-    fetchVideos();
-  }, [fetchVideos]);
+    fetchData();
+  }, [fetchData]);
 
   const handleDownload = useCallback((url: string, title: string) => {
     const link = document.createElement("a");
@@ -56,6 +101,12 @@ function Home() {
     document.body.removeChild(link);
   }, []);
 
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  };
+
   const renderLoading = () => (
     <div className="flex items-center justify-center min-h-64">
       <div className="loading loading-spinner loading-lg text-primary"></div>
@@ -66,14 +117,14 @@ function Home() {
     <div className="container mx-auto p-4">
       <div className="alert alert-error">
         <div>
-          <h3 className="font-bold">Error Loading Videos</h3>
+          <h3 className="font-bold">Error Loading Data</h3>
           <div className="text-sm">{getErrorMessage(error)}</div>
         </div>
         <button
           className="btn btn-sm btn-outline"
           onClick={() => {
             clearError();
-            fetchVideos();
+            fetchData();
           }}
         >
           Try Again
@@ -94,48 +145,72 @@ function Home() {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="bg-base-200 rounded-lg p-8 mb-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-4xl font-bold">Your Video Library</h1>
-            <p className="text-lg text-gray-500 mt-2">
-              Manage and browse your uploaded video content.
-            </p>
+      <div className="p-4 mb-8">
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard
+              icon={Film}
+              label="Total Videos"
+              value={stats.totalVideos}
+              color="primary"
+            />
+            <StatCard
+              icon={HardDrive}
+              label="Total Storage Used"
+              value={filesize(stats.totalOriginalSize)}
+              color="secondary"
+            />
+            <StatCard
+              icon={FileDown}
+              label="Compressed Size"
+              value={filesize(stats.totalCompressedSize)}
+              color="accent"
+            />
+            <StatCard
+              icon={Clock}
+              label="Total Duration"
+              value={formatDuration(stats.totalDuration)}
+              color="info"
+            />
           </div>
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search videos..."
-                className="input input-bordered w-full max-w-xs pl-10"
-              />
-            </div>
-            <div className="dropdown dropdown-end">
-              <label tabIndex={0} className="btn btn-ghost">
-                View
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </label>
-              <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32">
-                <li>
-                  <a onClick={() => setThumbnailSize('small')}>
-                    <Grid className="w-4 h-4 mr-2" /> Small
-                  </a>
-                </li>
-                <li>
-                  <a onClick={() => setThumbnailSize('medium')}>
-                    <LayoutGrid className="w-4 h-4 mr-2" /> Medium
-                  </a>
-                </li>
-                <li>
-                  <a onClick={() => setThumbnailSize('large')}>
-                    <List className="w-4 h-4 mr-2" /> Large
-                  </a>
-                </li>
-              </ul>
-            </div>
+        )}
+      </div>
+
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold">Your Video Library</h2>
+        <div className="flex items-center space-x-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search videos..."
+              className="input input-bordered w-full max-w-xs pl-10"
+            />
+          </div>
+          <div className="dropdown dropdown-end">
+            <label tabIndex={0} className="btn btn-ghost">
+              View
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </label>
+            <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32">
+              <li>
+                <a onClick={() => setThumbnailSize('small')}>
+                  <Grid className="w-4 h-4 mr-2" /> Small
+                </a>
+              </li>
+              <li>
+                <a onClick={() => setThumbnailSize('medium')}>
+                  <LayoutGrid className="w-4 h-4 mr-2" /> Medium
+                </a>
+              </li>
+              <li>
+                <a onClick={() => setThumbnailSize('large')}>
+                  <List className="w-4 h-4 mr-2" /> Large
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
@@ -143,11 +218,11 @@ function Home() {
       {isLoading && renderLoading()}
       {error && renderError()}
       {!isLoading && !error && videos.length === 0 && renderNoVideos()}
-      
+
       {!isLoading && !error && videos.length > 0 && (
         <div className={`grid gap-6 ${
-            thumbnailSize === 'small' ? 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-6' : 
-            thumbnailSize === 'medium' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 
+            thumbnailSize === 'small' ? 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-6' :
+            thumbnailSize === 'medium' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
             'grid-cols-1'
         }`}>
           {videos.map((video) => (
