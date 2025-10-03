@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
           {
             folder: "video-upload",
             resource_type: "video",
-            transformation: [{ quality: "auto", fetch_format: "mp4" }],
+             // This is the updated part for AI optimization
+            transformation: [{ quality: "auto:good", fetch_format: "auto" }],
           },
           (error, result) => {
             if (error) {

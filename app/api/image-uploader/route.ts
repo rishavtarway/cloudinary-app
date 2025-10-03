@@ -56,7 +56,8 @@ export async function POST(request: NextRequest) {
           {
             folder: "next-cloudinary-upload",
             resource_type: "image",
-            transformation: [{ quality: "auto", fetch_format: "auto" }],
+             // This is the updated part for AI optimization
+            transformation: [{ quality: "auto:good", fetch_format: "auto" }],
           },
           (error, result) => {
             if (error) {
