@@ -14,11 +14,12 @@ import {
   Share2Icon,
   UploadIcon,
   ImageIcon,
+  RefreshCwIcon, // Import a new icon
 } from "lucide-react";
 
 const sidebarItems = [
   { href: "/home", icon: LayoutDashboardIcon, label: "Home Page" },
-  { href: "/social-share", icon: Share2Icon, label: "Social Share" },
+  { href: "/media-converter", icon: RefreshCwIcon, label: "Media Converter" }, // Updated line
   { href: "/video-upload", icon: UploadIcon, label: "Video Upload" },
 ];
 
