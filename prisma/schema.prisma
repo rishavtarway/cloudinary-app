@@ -18,4 +18,13 @@ model Video {
   userId         String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [userId])
+}
+
+model User {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @unique
+  isSubscribed  Boolean  @default(false)
+  storageQuota  BigInt   @default(104857600) // 100MB in bytes
+  videos        Video[]
 }

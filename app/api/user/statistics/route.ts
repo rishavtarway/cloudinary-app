@@ -18,7 +18,14 @@ export async function GET() {
       });
     }
 
-    const videos = await prisma.video.findMany({ where: { userId } });
+    let user = await prisma.user.findUnique({ where: { userId } });
+    if (!user) {
+      user = await prisma.user.create({ data: { userId } });
+    }
+
+    const videos = await prisma.video.findMany({
+      where: { userId },
+    });
 
     const totalVideos = videos.length;
 
@@ -39,6 +46,8 @@ export async function GET() {
       totalOriginalSize,
       totalCompressedSize,
       totalDuration,
+      storageQuota: Number(user.storageQuota),
+      isSubscribed: user.isSubscribed,
     };
 
     const response = createSuccessResponse(

@@ -40,6 +40,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
+     // Find or create user
+     let user = await prisma.user.findUnique({ where: { userId } });
+     if (!user) {
+       user = await prisma.user.create({ data: { userId } });
+     }
+
     // Validate Cloudinary configuration
     validateCloudinaryConfig();
 
@@ -55,6 +61,18 @@ export async function POST(request: NextRequest) {
 
     // Validate file (max 60MB for videos)
     validateFileUpload(file, 60 * 1024 * 1024, ALLOWED_VIDEO_TYPES);
+
+      // Check storage quota
+    const videos = await prisma.video.findMany({ where: { userId } });
+    const currentUsage = videos.reduce(
+      (acc, video) => acc + parseInt(video.originalSize, 10),
+      0
+    );
+
+    if (!user.isSubscribed && currentUsage + file!.size > user.storageQuota) {
+      throw ErrorTypes.STORAGE_LIMIT_EXCEEDED;
+    }
+
 
     // Convert file to buffer for Cloudinary upload
     const bytes = await file!.arrayBuffer();

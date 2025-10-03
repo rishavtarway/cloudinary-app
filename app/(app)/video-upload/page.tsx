@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useApiError, getErrorMessage } from "@/hooks/useApiError";
+import SubscriptionModal from "@/components/SubscriptionModal";
 
 // New interface for tracking individual file upload status
 interface UploadableFile {
@@ -17,6 +18,7 @@ const VideoUpload = () => {
   const [files, setFiles] = useState<UploadableFile[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const router = useRouter();
   const { error, isLoading, executeWithErrorHandling, clearError } = useApiError();
 
@@ -35,30 +37,30 @@ const VideoUpload = () => {
     }
   };
 
+  const handleSubscribed = () => {
+    // Optionally, you can automatically retry the upload here
+    handleSubmit(new Event('submit') as any);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
 
-    if (files.length === 0) {
-      executeWithErrorHandling(() => {
-        throw new Error("Please select one or more video files to upload");
-      });
+    if (files.length === 0 || !title.trim()) {
+      // Basic validation
       return;
     }
-
-    if (!title.trim()) {
-        executeWithErrorHandling(() => {
-          throw new Error("Please provide a title for your video");
-        });
-        return;
-      }
+    
+    let allUploadsSuccessful = true;
 
     for (const uploadableFile of files) {
-        if (uploadableFile.file.size > MAX_FILE_SIZE) {
-            setFiles(prev => prev.map(f => f.id === uploadableFile.id ? { ...f, status: 'error', error: `File size exceeds maximum allowed size` } : f));
-            continue;
-        }
+      if (uploadableFile.status === 'success') continue; // Skip already uploaded files
+
+      if (uploadableFile.file.size > MAX_FILE_SIZE) {
+        setFiles(prev => prev.map(f => f.id === uploadableFile.id ? { ...f, status: 'error', error: `File size exceeds maximum allowed size` } : f));
+        allUploadsSuccessful = false;
+        continue;
+      }
 
       setFiles(prev => prev.map(f => f.id === uploadableFile.id ? { ...f, status: 'uploading' } : f));
 
@@ -68,32 +70,34 @@ const VideoUpload = () => {
       formData.append("description", description || "");
       formData.append("originalSize", uploadableFile.file.size.toString());
 
-
       try {
         await axios.post("/api/video-uploader", formData, {
           headers: { "Content-Type": "multipart/form-data" },
           onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / (progressEvent.total || uploadableFile.file.size)
-            );
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || uploadableFile.file.size));
             setFiles(prev => prev.map(f => f.id === uploadableFile.id ? { ...f, progress: percentCompleted } : f));
           },
         });
         setFiles(prev => prev.map(f => f.id === uploadableFile.id ? { ...f, status: 'success' } : f));
       } catch (err: any) {
-        setFiles(prev => prev.map(f => f.id === uploadableFile.id ? { ...f, status: 'error', error: getErrorMessage(err.response?.data) } : f));
+        allUploadsSuccessful = false;
+        const errorMessage = getErrorMessage(err.response?.data);
+        setFiles(prev => prev.map(f => f.id === uploadableFile.id ? { ...f, status: 'error', error: errorMessage } : f));
+        
+        if (err.response?.data?.code === "STORAGE_LIMIT_EXCEEDED") {
+          setShowSubscriptionModal(true);
+        }
       }
     }
-
-    // Optional: Redirect after all uploads are done or show a summary
-    // For now, we'll just log it.
-    console.log("All uploads processed.");
-    // You might want to navigate away or show a success message after a short delay
-    setTimeout(() => router.push("/home"), 2000);
+    
+    if (allUploadsSuccessful) {
+      setTimeout(() => router.push("/home"), 2000);
+    }
   };
 
   return (
     <div>
+      {showSubscriptionModal && <SubscriptionModal onClose={() => setShowSubscriptionModal(false)} onSubscribed={handleSubscribed} />}
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-4">Upload Videos</h1>
 
