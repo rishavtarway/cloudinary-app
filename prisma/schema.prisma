@@ -35,12 +35,12 @@ model Library {
 }
 
 model User {
-  id               String    @id @default(auto()) @map("_id") @db.ObjectId
-  userId           String    @unique
-  isSubscribed     Boolean   @default(false)
-  storageQuota     BigInt    @default(104857600) // 100MB in bytes
-  videos           Video[]
-  ownedLibraries   Library[] @relation("OwnedLibraries")
-  sharedLibraries  Library[] @relation("SharedLibraries", fields: [sharedLibraryIDs], references: [id])
-  sharedLibraryIDs String[]  @db.ObjectId
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String    @unique
+  isSubscribed       Boolean   @default(false)
+  storageQuota       BigInt    @default(104857600) // 100MB in bytes
+  videos             Video[]
+  ownedLibraries     Library[] @relation("OwnedLibraries")
+  sharedLibraries    Library[] @relation("SharedLibraries", fields: [sharedLibraryIDs], references: [id])
+  sharedLibraryIDs   String[]  @db.ObjectId
 }

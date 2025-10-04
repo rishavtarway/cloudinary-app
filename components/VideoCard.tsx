@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getCldImageUrl, getCldVideoUrl } from "next-cloudinary";
-import { Download, Clock, FileDown, FileUp } from "lucide-react";
+import { Download, Clock, FileDown, FileUp, Plus } from "lucide-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { filesize } from "filesize";
@@ -27,10 +27,11 @@ const thumbnailSizes = {
 interface VideoCardProps {
   video: Video;
   onDownload?: (url: string, title: string) => void;
+  onAddToLibrary?: (videoId: string) => void;
   thumbnailSize?: keyof typeof thumbnailSizes;
 }
 
-const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, thumbnailSize = 'medium' }) => {
+const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, onAddToLibrary, thumbnailSize = 'medium' }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [previewError, setPreviewError] = useState(false);
 
@@ -101,6 +102,12 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, thumbnailSize 
       onDownload(getFullVideoUrl(video.publicId), video.title);
     }
   };
+  
+  const handleAddToLibrary = () => {
+    if (onAddToLibrary) {
+      onAddToLibrary(video.id);
+    }
+  };
 
   return (
     <div
@@ -157,9 +164,14 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, thumbnailSize 
             <div className="text-xs font-semibold">
               <span className="text-accent">{compressionPercentage}% savings</span>
             </div>
-            <button className="btn btn-ghost btn-xs btn-circle" onClick={handleDownload}>
-              <Download size={14} />
-            </button>
+            <div>
+              <button className="btn btn-ghost btn-xs btn-circle" onClick={handleDownload}>
+                <Download size={14} />
+              </button>
+              <button className="btn btn-ghost btn-xs btn-circle" onClick={handleAddToLibrary}>
+                <Plus size={14} />
+              </button>
+            </div>
           </div>
         </div>
       ) : (
@@ -192,9 +204,14 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, thumbnailSize 
               Compression:{" "}
               <span className="text-accent">{compressionPercentage}%</span>
             </div>
-            <button className="btn btn-primary btn-sm" onClick={handleDownload}>
-              <Download size={16} />
-            </button>
+            <div>
+                <button className="btn btn-primary btn-sm mr-2" onClick={handleDownload}>
+                    <Download size={16} />
+                </button>
+                <button className="btn btn-secondary btn-sm" onClick={handleAddToLibrary}>
+                    <Plus size={16} />
+                </button>
+            </div>
           </div>
         </div>
       )}

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import VideoCard from "@/components/VideoCard";
 import SubscriptionModal from "@/components/SubscriptionModal";
+import AddToLibraryModal from "@/components/AddToLibraryModal";
 import { useApiError, getErrorMessage } from "@/hooks/useApiError";
 import { Search, List, Grid, LayoutGrid, Film, HardDrive, FileDown, Clock, AlertTriangle } from "lucide-react";
 import { filesize } from "filesize";
@@ -49,6 +50,8 @@ function Home() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [thumbnailSize, setThumbnailSize] = useState<ThumbnailSize>('medium');
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showAddToLibraryModal, setShowAddToLibraryModal] = useState(false);
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const { error, isLoading, executeWithErrorHandling, clearError } = useApiError();
 
   const fetchData = useCallback(async () => {
@@ -87,6 +90,11 @@ function Home() {
     document.body.removeChild(link);
   }, []);
 
+  const handleAddToLibrary = (videoId: string) => {
+    setSelectedVideoId(videoId);
+    setShowAddToLibraryModal(true);
+  };
+
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -115,9 +123,14 @@ function Home() {
   return (
     <div className="container mx-auto p-4">
       {showSubscriptionModal && <SubscriptionModal onClose={() => setShowSubscriptionModal(false)} onSubscribed={handleSubscribed} />}
+      {showAddToLibraryModal && selectedVideoId && (
+        <AddToLibraryModal
+          videoId={selectedVideoId}
+          onClose={() => setShowAddToLibraryModal(false)}
+        />
+      )}
       
       <div className="bg-base-200 rounded-lg p-6 mb-8">
-        {/* <h1 className="text-3xl font-bold mb-6">Your Dashboard</h1> */}
         {stats ? (
           <div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -188,7 +201,7 @@ function Home() {
       
       {!isLoading && !error && videos.length > 0 && (
         <div className={`grid gap-6 ${thumbnailSize === 'small' ? 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-6' : thumbnailSize === 'medium' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-          {videos.map((video) => (<VideoCard key={video.id} video={video} onDownload={handleDownload} thumbnailSize={thumbnailSize} />))}
+          {videos.map((video) => (<VideoCard key={video.id} video={video} onDownload={handleDownload} onAddToLibrary={handleAddToLibrary} thumbnailSize={thumbnailSize} />))}
         </div>
       )}
     </div>

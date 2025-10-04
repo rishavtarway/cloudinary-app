@@ -15,10 +15,12 @@ import {
   UploadIcon,
   ImageIcon,
   RefreshCwIcon, // Import a new icon
+  LibraryIcon
 } from "lucide-react";
 
 const sidebarItems = [
   { href: "/home", icon: LayoutDashboardIcon, label: "Home Page" },
+  { href: "/shared-libraries", icon: LibraryIcon, label: "Shared Libraries" },
   { href: "/media-converter", icon: RefreshCwIcon, label: "Media Converter" }, // Updated line
   { href: "/video-upload", icon: UploadIcon, label: "Video Upload" },
 ];
