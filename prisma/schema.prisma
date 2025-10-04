@@ -21,6 +21,7 @@ model Video {
   user           User      @relation(fields: [userId], references: [userId])
   libraries      Library[] @relation(fields: [libraryIDs], references: [id])
   libraryIDs     String[]  @db.ObjectId
+   comments       Comment[] 
 }
 
 model Library {
@@ -43,4 +44,16 @@ model User {
   ownedLibraries     Library[] @relation("OwnedLibraries")
   sharedLibraries    Library[] @relation("SharedLibraries", fields: [sharedLibraryIDs], references: [id])
   sharedLibraryIDs   String[]  @db.ObjectId
+   comments           Comment[] 
+}
+
+model Comment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [userId])
+  videoId   String   @db.ObjectId
+  video     Video    @relation(fields: [videoId], references: [id])
 }
