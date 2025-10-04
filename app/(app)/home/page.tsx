@@ -4,6 +4,7 @@ import axios from "axios";
 import VideoCard from "@/components/VideoCard";
 import SubscriptionModal from "@/components/SubscriptionModal";
 import AddToLibraryModal from "@/components/AddToLibraryModal";
+import CommentModal from "@/components/CommentModal"; 
 import { useApiError, getErrorMessage } from "@/hooks/useApiError";
 import { Search, List, Grid, LayoutGrid, Film, HardDrive, FileDown, Clock, AlertTriangle } from "lucide-react";
 import { filesize } from "filesize";
@@ -52,6 +53,8 @@ function Home() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showAddToLibraryModal, setShowAddToLibraryModal] = useState(false);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [selectedVideoIdForComment, setSelectedVideoIdForComment] = useState<string | null>(null);
   const { error, isLoading, executeWithErrorHandling, clearError } = useApiError();
 
   const fetchData = useCallback(async () => {
@@ -95,6 +98,11 @@ function Home() {
     setShowAddToLibraryModal(true);
   };
 
+  const handleComment = (videoId: string) => {
+    setSelectedVideoIdForComment(videoId);
+    setShowCommentModal(true);
+  };
+
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -127,6 +135,12 @@ function Home() {
         <AddToLibraryModal
           videoId={selectedVideoId}
           onClose={() => setShowAddToLibraryModal(false)}
+        />
+      )}
+      {showCommentModal && selectedVideoIdForComment && ( // Add this section
+        <CommentModal
+          videoId={selectedVideoIdForComment}
+          onClose={() => setShowCommentModal(false)}
         />
       )}
       
@@ -201,7 +215,7 @@ function Home() {
       
       {!isLoading && !error && videos.length > 0 && (
         <div className={`grid gap-6 ${thumbnailSize === 'small' ? 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-6' : thumbnailSize === 'medium' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-          {videos.map((video) => (<VideoCard key={video.id} video={video} onDownload={handleDownload} onAddToLibrary={handleAddToLibrary} thumbnailSize={thumbnailSize} />))}
+          {videos.map((video) => (<VideoCard key={video.id} video={video} onDownload={handleDownload} onAddToLibrary={handleAddToLibrary} onComment={handleComment} thumbnailSize={thumbnailSize} />))}
         </div>
       )}
     </div>

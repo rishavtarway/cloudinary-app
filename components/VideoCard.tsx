@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getCldImageUrl, getCldVideoUrl } from "next-cloudinary";
-import { Download, Clock, FileDown, FileUp, Plus } from "lucide-react";
+import { Download, Clock, FileDown, FileUp, Plus, MessageCircle } from "lucide-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { filesize } from "filesize";
@@ -28,10 +28,11 @@ interface VideoCardProps {
   video: Video;
   onDownload?: (url: string, title: string) => void;
   onAddToLibrary?: (videoId: string) => void;
+  onComment?: (videoId: string) => void;
   thumbnailSize?: keyof typeof thumbnailSizes;
 }
 
-const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, onAddToLibrary, thumbnailSize = 'medium' }) => {
+const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, onAddToLibrary, onComment, thumbnailSize = 'medium' }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [previewError, setPreviewError] = useState(false);
 
@@ -106,6 +107,12 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, onAddToLibrary
   const handleAddToLibrary = () => {
     if (onAddToLibrary) {
       onAddToLibrary(video.id);
+    }
+  };
+
+  const handleComment = () => {
+    if (onComment) {
+      onComment(video.id);
     }
   };
 
@@ -211,6 +218,9 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, onAddToLibrary
                 <button className="btn btn-secondary btn-sm" onClick={handleAddToLibrary}>
                     <Plus size={16} />
                 </button>
+                <button className="btn btn-info btn-sm ml-2" onClick={handleComment}>
+                <MessageCircle size={16} />
+              </button>
             </div>
           </div>
         </div>
