@@ -1,11 +1,11 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useApiError, getErrorMessage } from "@/hooks/useApiError";
 import SubscriptionModal from "@/components/SubscriptionModal";
+import { UploadCloud, File, X, CheckCircle } from 'lucide-react';
 
-// New interface for tracking individual file upload status
 interface UploadableFile {
   file: File;
   id: string;
@@ -21,24 +21,49 @@ const VideoUpload = () => {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const router = useRouter();
   const { error, isLoading, executeWithErrorHandling, clearError } = useApiError();
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const MAX_FILE_SIZE = 60 * 1024 * 1024;
 
+  const addFilesToQueue = (newFiles: File[]) => {
+    const uploadableFiles = newFiles.map(file => ({
+      file,
+      id: `${file.name}-${file.lastModified}-${file.size}`,
+      progress: 0,
+      error: null,
+      status: 'pending' as const,
+    }));
+    setFiles(prev => [...prev, ...uploadableFiles]);
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files).map(file => ({
-        file,
-        id: `${file.name}-${file.lastModified}`,
-        progress: 0,
-        error: null,
-        status: 'pending' as const,
-      }));
-      setFiles(selectedFiles);
+      addFilesToQueue(Array.from(e.target.files));
     }
   };
+  
+  const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }
+
+  const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }
+
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    addFilesToQueue(droppedFiles);
+  }
+  
+  const removeFile = (id: string) => {
+    setFiles(prev => prev.filter(f => f.id !== id));
+  }
 
   const handleSubscribed = () => {
-    // Optionally, you can automatically retry the upload here
     handleSubmit(new Event('submit') as any);
   };
 
@@ -47,14 +72,13 @@ const VideoUpload = () => {
     clearError();
 
     if (files.length === 0 || !title.trim()) {
-      // Basic validation
       return;
     }
     
     let allUploadsSuccessful = true;
 
     for (const uploadableFile of files) {
-      if (uploadableFile.status === 'success') continue; // Skip already uploaded files
+      if (uploadableFile.status === 'success' || uploadableFile.status === 'uploading') continue;
 
       if (uploadableFile.file.size > MAX_FILE_SIZE) {
         setFiles(prev => prev.map(f => f.id === uploadableFile.id ? { ...f, status: 'error', error: `File size exceeds maximum allowed size` } : f));
@@ -74,7 +98,8 @@ const VideoUpload = () => {
         await axios.post("/api/video-uploader", formData, {
           headers: { "Content-Type": "multipart/form-data" },
           onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || uploadableFile.file.size));
+            const total = progressEvent.total || uploadableFile.file.size;
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / total);
             setFiles(prev => prev.map(f => f.id === uploadableFile.id ? { ...f, progress: percentCompleted } : f));
           },
         });
@@ -90,7 +115,7 @@ const VideoUpload = () => {
       }
     }
     
-    if (allUploadsSuccessful) {
+    if (allUploadsSuccessful && files.every(f => f.status === 'success')) {
       setTimeout(() => router.push("/home"), 2000);
     }
   };
@@ -114,6 +139,25 @@ const VideoUpload = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div 
+            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragOver ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary'}`}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+            onClick={() => document.getElementById('file-input')?.click()}
+          >
+            <UploadCloud className="mx-auto w-12 h-12 text-base-content/50" />
+            <p className="mt-2 text-lg font-semibold">Drag & Drop files here</p>
+            <p className="text-sm text-base-content/60">or click to browse</p>
+            <input
+              id="file-input"
+              type="file"
+              accept="video/*"
+              multiple
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </div>
           <div>
             <label className="label">
               <span className="label-text">Title</span>
@@ -125,6 +169,7 @@ const VideoUpload = () => {
               className="input input-bordered w-full"
               required
               placeholder="A title for all uploaded videos"
+              aria-required="true"
             />
           </div>
 
@@ -140,34 +185,34 @@ const VideoUpload = () => {
             />
           </div>
 
-          <div>
-            <label className="label">
-              <span className="label-text">Video Files</span>
-            </label>
-            <input
-              type="file"
-              accept="video/*"
-              multiple // Allow multiple file selection
-              onChange={handleFileChange}
-              className="file-input file-input-bordered w-full"
-              required
-            />
-          </div>
-
           {files.length > 0 && (
             <div className="space-y-2">
-                <h3 className="font-bold">Upload Queue</h3>
+                <h3 className="font-bold text-lg">Upload Queue</h3>
               {files.map(uploadableFile => (
-                <div key={uploadableFile.id} className="p-2 border rounded">
-                  <p className="text-sm font-semibold">{uploadableFile.file.name}</p>
-                  {(uploadableFile.status === 'uploading' || uploadableFile.status === 'success') && (
-                     <progress
-                        className={`progress ${uploadableFile.status === 'success' ? 'progress-success' : 'progress-primary'} w-full`}
-                        value={uploadableFile.progress}
-                        max="100"
-                    />
-                  )}
-                  {uploadableFile.status === 'error' && <p className="text-red-500 text-xs">{uploadableFile.error}</p>}
+                <div key={uploadableFile.id} className="p-4 border rounded-lg bg-base-200 flex items-center gap-4">
+                    <File className="w-8 h-8 text-primary"/>
+                    <div className="flex-grow">
+                        <div className="flex justify-between items-center">
+                            <p className="text-sm font-semibold truncate">{uploadableFile.file.name}</p>
+                            {uploadableFile.status !== 'uploading' && (
+                                <button type="button" onClick={() => removeFile(uploadableFile.id)} className="btn btn-ghost btn-xs btn-circle">
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
+                         {(uploadableFile.status === 'uploading' || uploadableFile.status === 'success') && (
+                            <div className="flex items-center gap-2">
+                                <progress
+                                    className={`progress ${uploadableFile.status === 'success' ? 'progress-success' : 'progress-primary'} w-full`}
+                                    value={uploadableFile.progress}
+                                    max="100"
+                                />
+                                <span className="text-xs font-mono">{uploadableFile.progress}%</span>
+                            </div>
+                         )}
+                         {uploadableFile.status === 'success' && <p className="text-success text-xs flex items-center gap-1 mt-1"><CheckCircle size={14}/> Upload complete</p>}
+                         {uploadableFile.status === 'error' && <p className="text-error text-xs">{uploadableFile.error}</p>}
+                    </div>
                 </div>
               ))}
             </div>
@@ -176,9 +221,10 @@ const VideoUpload = () => {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={isLoading}
+            disabled={isLoading || files.length === 0 || files.every(f => f.status === 'success' || f.status === 'uploading')}
+            aria-label="Upload selected videos"
           >
-            {isLoading ? `Uploading...` : "Upload Videos"}
+            {isLoading ? `Uploading...` : `Upload ${files.filter(f => f.status === 'pending').length} Video(s)`}
           </button>
         </form>
       </div>

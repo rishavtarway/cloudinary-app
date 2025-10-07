@@ -4,10 +4,11 @@ import axios from "axios";
 import VideoCard from "@/components/VideoCard";
 import SubscriptionModal from "@/components/SubscriptionModal";
 import AddToLibraryModal from "@/components/AddToLibraryModal";
-import CommentModal from "@/components/CommentModal"; 
+import CommentModal from "@/components/CommentModal";
 import { useApiError, getErrorMessage } from "@/hooks/useApiError";
-import { Search, List, Grid, LayoutGrid, Film, HardDrive, FileDown, Clock, AlertTriangle } from "lucide-react";
+import { Search, List, Grid, LayoutGrid, Film, HardDrive, FileDown, Clock, AlertTriangle, TrendingUp, Zap } from "lucide-react";
 import { filesize } from "filesize";
+import OnboardingTour from "@/components/OnboardingTour";
 
 interface Video {
   id: string;
@@ -31,19 +32,46 @@ interface Stats {
 
 type ThumbnailSize = 'small' | 'medium' | 'large';
 
-const StatCard = ({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string | number; color: string; }) => (
-    <div className="card bg-base-200 shadow-xl">
-        <div className="card-body flex-row items-center space-x-4 p-4">
-            <div className={`p-3 rounded-full bg-${color} text-white shadow-md`}>
-                <Icon className="w-6 h-6" />
+const StatCard = ({ icon: Icon, label, value, color, description }: { icon: React.ElementType; label: string; value: string | number; color: string; description?: string }) => (
+    <div className="card bg-base-200 shadow-xl transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+        <div className="card-body p-4">
+            <div className="flex items-start justify-between">
+                <div>
+                    <div className="text-3xl font-bold">{value}</div>
+                    <div className="text-sm text-base-content opacity-70 mt-1">{label}</div>
+                </div>
+                <div className={`p-3 rounded-full bg-${color} text-white shadow-md`}>
+                    <Icon className="w-6 h-6" />
+                </div>
             </div>
-            <div>
-                <div className="text-xl font-bold">{value}</div>
-                <div className="text-sm text-base-content opacity-70">{label}</div>
-            </div>
+            {description && <div className="text-xs text-base-content opacity-50 mt-2">{description}</div>}
         </div>
     </div>
 );
+
+const SkeletonStatCard = () => (
+    <div className="card bg-base-200 shadow-xl">
+        <div className="card-body p-4">
+            <div className="animate-pulse flex items-start justify-between">
+                <div>
+                    <div className="h-8 bg-base-300 rounded w-20 mb-2"></div>
+                    <div className="h-4 bg-base-300 rounded w-24"></div>
+                </div>
+                <div className="w-12 h-12 bg-base-300 rounded-full"></div>
+            </div>
+        </div>
+    </div>
+)
+
+const SkeletonVideoCard = () => (
+    <div className="card bg-base-100 shadow-xl animate-pulse">
+        <div className="aspect-video bg-base-300 rounded-t-lg"></div>
+        <div className="card-body p-4">
+            <div className="h-5 bg-base-300 rounded w-3/4 mb-2"></div>
+            <div className="h-4 bg-base-300 rounded w-1/2"></div>
+        </div>
+    </div>
+)
 
 
 function Home() {
@@ -56,6 +84,22 @@ function Home() {
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [selectedVideoIdForComment, setSelectedVideoIdForComment] = useState<string | null>(null);
   const { error, isLoading, executeWithErrorHandling, clearError } = useApiError();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+
+  useEffect(() => {
+    // Check if the user has seen the onboarding tour before
+    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboardingTour');
+    if (!hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('hasSeenOnboardingTour', 'true');
+    setShowOnboarding(false);
+  };
+
 
   const fetchData = useCallback(async () => {
     const result = await executeWithErrorHandling(async () => {
@@ -78,7 +122,7 @@ function Home() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-  
+
   const handleSubscribed = () => {
     fetchData(); // Refetch data to update UI
   };
@@ -106,11 +150,20 @@ function Home() {
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
+    const secs = Math.round(seconds % 60);
+    let durationString = '';
+    if (hours > 0) durationString += `${hours}h `;
+    if (minutes > 0) durationString += `${minutes}m `;
+    if (secs > 0 || (hours === 0 && minutes === 0)) durationString += `${secs}s`;
+    return durationString.trim();
   };
+  const compressionSavings = stats ? stats.totalOriginalSize - stats.totalCompressedSize : 0;
+
 
   const renderLoading = () => (
-    <div className="flex items-center justify-center min-h-64"><div className="loading loading-spinner loading-lg text-primary"></div></div>
+    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => <SkeletonVideoCard key={i} />)}
+    </div>
   );
 
   const renderError = () => (
@@ -130,6 +183,7 @@ function Home() {
 
   return (
     <div className="container mx-auto p-4">
+      {showOnboarding && <OnboardingTour onComplete={handleOnboardingComplete} />}
       {showSubscriptionModal && <SubscriptionModal onClose={() => setShowSubscriptionModal(false)} onSubscribed={handleSubscribed} />}
       {showAddToLibraryModal && selectedVideoId && (
         <AddToLibraryModal
@@ -137,26 +191,26 @@ function Home() {
           onClose={() => setShowAddToLibraryModal(false)}
         />
       )}
-      {showCommentModal && selectedVideoIdForComment && ( // Add this section
+      {showCommentModal && selectedVideoIdForComment && (
         <CommentModal
           videoId={selectedVideoIdForComment}
           onClose={() => setShowCommentModal(false)}
         />
       )}
       
-      <div className="bg-base-200 rounded-lg p-6 mb-8">
+      <div className="mb-8">
         {stats ? (
           <div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard icon={Film} label="Total Videos" value={stats.totalVideos} color="primary" />
-              <StatCard icon={HardDrive} label="Storage Used" value={filesize(stats.totalOriginalSize)} color="secondary" />
-              <StatCard icon={FileDown} label="Compressed Size" value={filesize(stats.totalCompressedSize)} color="accent" />
-              <StatCard icon={Clock} label="Total Duration" value={formatDuration(stats.totalDuration)} color="info" />
+              <StatCard icon={Film} label="Total Videos" value={stats.totalVideos} color="primary" description="The total count of videos you've uploaded." />
+              <StatCard icon={HardDrive} label="Storage Used" value={filesize(stats.totalOriginalSize)} color="secondary" description="Total original size of all your videos." />
+              <StatCard icon={Zap} label="Compression Savings" value={filesize(compressionSavings)} color="accent" description={`You've saved ${filesize(compressionSavings)} through compression.`} />
+              <StatCard icon={Clock} label="Total Duration" value={formatDuration(stats.totalDuration)} color="info" description="The combined duration of all your videos." />
             </div>
-            <div className="mt-6">
+            <div className="mt-6 bg-base-200 rounded-lg p-4">
               <div className="flex justify-between items-center mb-1">
                 <h3 className="text-lg font-semibold">Storage Usage</h3>
-                {stats.isSubscribed && <div className="badge badge-success">PRO PLAN</div>}
+                {stats.isSubscribed ? <div className="badge badge-success">PRO PLAN</div> : <div className="badge badge-ghost">FREE PLAN</div>}
               </div>
               <progress className="progress progress-primary w-full" value={stats.totalOriginalSize} max={stats.storageQuota}></progress>
               <div className="flex justify-between text-sm text-base-content opacity-70 mt-1">
@@ -167,11 +221,15 @@ function Home() {
               </div>
             </div>
           </div>
-        ) : isLoading ? <div className="loading loading-dots loading-md mx-auto"></div> : null}
+        ) : isLoading ? (
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => <SkeletonStatCard key={i} />)}
+             </div>
+        ) : null}
       </div>
 
       <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-bold">Your Video Library</h2>
+        <h2 className="text-3xl font-bold" id="video-library-heading">Your Video Library</h2>
         <div className="flex items-center space-x-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -179,16 +237,17 @@ function Home() {
                 type="text"
                 placeholder="Search videos..."
                 className="input input-bordered w-full max-w-xs pl-10"
+                aria-label="Search your videos"
               />
             </div>
             <div className="dropdown dropdown-end">
-              <label tabIndex={0} className="btn btn-ghost">
+              <label tabIndex={0} className="btn btn-ghost" aria-haspopup="true" aria-controls="view-menu">
                 View
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </label>
-              <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32">
+              <ul tabIndex={0} id="view-menu" className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32">
                 <li>
                   <a onClick={() => setThumbnailSize('small')}>
                     <Grid className="w-4 h-4 mr-2" /> Small

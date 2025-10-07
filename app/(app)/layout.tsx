@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
@@ -11,18 +11,18 @@ import {
   LogOutIcon,
   MenuIcon,
   LayoutDashboardIcon,
-  Share2Icon,
   UploadIcon,
-  ImageIcon,
-  RefreshCwIcon, // Import a new icon
-  LibraryIcon
+  RefreshCwIcon,
+  LibraryIcon,
+  Sun,
+  Moon
 } from "lucide-react";
 
 const sidebarItems = [
-  { href: "/home", icon: LayoutDashboardIcon, label: "Home Page" },
-  { href: "/shared-libraries", icon: LibraryIcon, label: "Shared Libraries" },
-  { href: "/media-converter", icon: RefreshCwIcon, label: "Media Converter" }, // Updated line
-  { href: "/video-upload", icon: UploadIcon, label: "Video Upload" },
+  { href: "/home", icon: LayoutDashboardIcon, label: "Home Page", id: "home-link" },
+  { href: "/shared-libraries", icon: LibraryIcon, label: "Shared Libraries", id: "shared-libraries-link" },
+  { href: "/media-converter", icon: RefreshCwIcon, label: "Media Converter", id: "media-converter-link" },
+  { href: "/video-upload", icon: UploadIcon, label: "Video Upload", id: "upload-button" },
 ];
 
 export default function AppLayout({
@@ -35,6 +35,21 @@ export default function AppLayout({
   const router = useRouter();
   const { signOut } = useClerk();
   const { user } = useUser();
+  const [theme, setTheme] = useState('dark');
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    setTheme(savedTheme);
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+  };
+
 
   const handleLogoClick = () => {
     router.push("/");
@@ -61,6 +76,7 @@ export default function AppLayout({
               <label
                 htmlFor="sidebar-drawer"
                 className="btn btn-square btn-ghost drawer-button"
+                aria-label="open sidebar"
               >
                 <MenuIcon />
               </label>
@@ -73,12 +89,15 @@ export default function AppLayout({
               </Link>
             </div>
             <div className="flex-none flex items-center space-x-4">
+              <button onClick={toggleTheme} className="btn btn-ghost btn-circle" aria-label="Toggle theme">
+                  {theme === 'dark' ? <Sun/> : <Moon/>}
+              </button>
               {user && (
                 <>
                   <div className="avatar">
                     <div className="w-8 h-8 rounded-full">
                       <Image
-                        width={40} // Set a width for the image
+                        width={40}
                         height={40}
                         src={user.imageUrl}
                         alt={
@@ -87,12 +106,13 @@ export default function AppLayout({
                       />
                     </div>
                   </div>
-                  <span className="text-sm truncate max-w-xs lg:max-w-md">
+                  <span className="text-sm truncate max-w-xs lg:max-w-md hidden md:block">
                     {user.username || user.emailAddresses[0].emailAddress}
                   </span>
                   <button
                     onClick={handleSignOut}
                     className="btn btn-ghost btn-circle"
+                    aria-label="Sign out"
                   >
                     <LogOutIcon className="h-6 w-6" />
                   </button>
@@ -112,13 +132,14 @@ export default function AppLayout({
         <label htmlFor="sidebar-drawer" className="drawer-overlay"></label>
         <aside className="bg-base-200 w-64 h-full flex flex-col">
           <div className="flex items-center justify-center py-4">
-            <ImageIcon className="w-10 h-10 text-primary" />
+            <RefreshCwIcon className="w-10 h-10 text-primary" />
           </div>
           <ul className="menu p-4 w-full text-base-content flex-grow">
             {sidebarItems.map((item) => (
-              <li key={item.href} className="mb-2">
+              <li key={item.href}>
                 <Link
                   href={item.href}
+                  id={item.id}
                   className={`flex items-center space-x-4 px-4 py-2 rounded-lg ${
                     pathname === item.href
                       ? "bg-primary text-white"
