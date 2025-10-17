@@ -39,7 +39,7 @@ model User {
   id                 String    @id @default(auto()) @map("_id") @db.ObjectId
   userId             String    @unique
   isSubscribed       Boolean   @default(false)
-  storageQuota       BigInt    @default(104857600) // 100MB in bytes
+  storageQuota       BigInt    @default(41943040) // 40MB in bytes
   videos             Video[]
   ownedLibraries     Library[] @relation("OwnedLibraries")
   sharedLibraries    Library[] @relation("SharedLibraries", fields: [sharedLibraryIDs], references: [id])
