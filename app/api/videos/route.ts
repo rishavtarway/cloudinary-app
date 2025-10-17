@@ -8,11 +8,6 @@ import {
   AppError,
 } from "@/lib/error-handler";
 
-// In-memory cache
-let cachedVideos: any = null;
-let lastCacheTime: number = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
 export async function GET() {
   try {
     // Authenticate user
@@ -23,26 +18,11 @@ export async function GET() {
       });
     }
 
-    const now = Date.now();
-    if (cachedVideos && now - lastCacheTime < CACHE_DURATION) {
-      const response = createSuccessResponse(
-        { videos: cachedVideos },
-        "Videos fetched from cache"
-      );
-      return NextResponse.json(response, { status: 200 });
-    }
-
     // Fetch user's videos
     const videos = await prisma.video.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
     });
-
-    // Update cache
-
-    // Update cache
-    cachedVideos = videos;
-    lastCacheTime = now;
 
     // Return success response
     const response = createSuccessResponse(
