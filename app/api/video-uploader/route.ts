@@ -12,6 +12,8 @@ import {
   AppError,
 } from "@/lib/error-handler";
 
+export const maxDuration = 300; // Increase the timeout to 5 minutes
+
 // Cloudinary Configuration
 cloudinary.config({
   cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
