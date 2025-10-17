@@ -36,6 +36,7 @@ export default function AppLayout({
   const { signOut } = useClerk();
   const { user } = useUser();
   const [theme, setTheme] = useState('dark');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -56,7 +57,13 @@ export default function AppLayout({
   };
 
   const handleSignOut = async () => {
-    await signOut();
+    setIsLoggingOut(true);
+    try {
+      await signOut({ redirectUrl: "/sign-in" });
+    } catch (error) {
+      console.error("Sign out error:", error);
+      setIsLoggingOut(false); // Reset on error
+    }
   };
 
   return (
@@ -111,10 +118,11 @@ export default function AppLayout({
                   </span>
                   <button
                     onClick={handleSignOut}
-                    className="btn btn-ghost btn-circle"
+                    className={`btn btn-ghost btn-circle ${isLoggingOut ? "loading" : ""}`}
+                    disabled={isLoggingOut}
                     aria-label="Sign out"
                   >
-                    <LogOutIcon className="h-6 w-6" />
+                    {!isLoggingOut && <LogOutIcon className="h-6 w-6" />}
                   </button>
                 </>
               )}
@@ -157,10 +165,11 @@ export default function AppLayout({
             <div className="p-4">
               <button
                 onClick={handleSignOut}
-                className="btn btn-outline btn-error w-full"
+                className={`btn btn-outline btn-error w-full ${isLoggingOut ? "loading" : ""}`}
+                disabled={isLoggingOut}
               >
-                <LogOutIcon className="mr-2 h-5 w-5" />
-                Sign Out
+                {!isLoggingOut && <LogOutIcon className="mr-2 h-5 w-5" />}
+                {isLoggingOut ? 'Logging out...' : 'Sign Out'}
               </button>
             </div>
           )}
