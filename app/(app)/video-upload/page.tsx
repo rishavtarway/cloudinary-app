@@ -20,7 +20,7 @@ const VideoUpload = () => {
   const [description, setDescription] = useState("");
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const router = useRouter();
-  const { error, isLoading, executeWithErrorHandling, clearError } = useApiError();
+  const { error, isLoading, clearError } = useApiError();
   const [isDragOver, setIsDragOver] = useState(false);
 
   const MAX_FILE_SIZE = 60 * 1024 * 1024;
