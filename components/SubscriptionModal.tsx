@@ -30,7 +30,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onClose, onSubscr
         <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
         <h3 className="font-bold text-lg">Storage Limit Exceeded!</h3>
         <p className="py-4">
-          You've used up your 40 MB of free storage. To continue uploading, please upgrade your plan.
+          You&apos;ve used up your 40 MB of free storage. To continue uploading, please upgrade your plan.
         </p>
         <div className="modal-action">
           <button className="btn btn-primary" onClick={handleSubscribe} disabled={isSubscribing}>
