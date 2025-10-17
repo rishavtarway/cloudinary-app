@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useApiError, getErrorMessage } from "@/hooks/useApiError";
+import { useApiError } from "@/hooks/useApiError";
 import { useUser } from "@clerk/nextjs";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -26,7 +26,7 @@ const CommentModal: React.FC<CommentModalProps> = ({ videoId, onClose }) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const { user } = useUser();
-  const { error, isLoading, executeWithErrorHandling } = useApiError();
+  const { isLoading, executeWithErrorHandling } = useApiError();
 
   useEffect(() => {
     const fetchComments = async () => {

@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useUser } from "@clerk/nextjs";
 import { useApiError, getErrorMessage } from "@/hooks/useApiError";
-import { Library, Plus, Users, Video, Trash2, ArrowLeft, MoreVertical } from "lucide-react";
+import { Library, Plus, Users, Video, Trash2, ArrowLeft } from "lucide-react";
 import { CldImage } from "next-cloudinary";
 
 // Define TypeScript interfaces for our data

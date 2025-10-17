@@ -4,6 +4,7 @@ import { Download, Clock, FileDown, FileUp, Plus, MessageCircle } from "lucide-r
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { filesize } from "filesize";
+import Image from 'next/image';
 
 dayjs.extend(relativeTime);
 
@@ -52,6 +53,10 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, onAddToLibrary
       assetType: "video",
     });
   }, [thumbnailSize]);
+
+  // FIX 1: Create a variable for the thumbnail URL and provide a fallback image path.
+  // This ensures the `src` prop never receives `undefined`.
+  const thumbnailUrl = getThumbnailUrl(video.publicId) || "/placeholder-video.png";
 
   const getFullVideoUrl = useCallback((publicId: string) => {
     if (!publicId) return undefined;
@@ -130,7 +135,8 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, onAddToLibrary
       <figure className="aspect-video relative overflow-hidden">
         <video
           src={isHovered && !previewError ? getPreviewVideoUrl(video.publicId) : undefined}
-          poster={getThumbnailUrl(video.publicId)}
+          // Use the new variable for the poster as well
+          poster={thumbnailUrl}
           autoPlay={isHovered && !previewError}
           muted
           loop
@@ -138,15 +144,18 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, onAddToLibrary
           onError={handlePreviewError}
           loading="lazy"
         />
-        <img
-            src={getThumbnailUrl(video.publicId)}
+        <Image
+            // FIX 2: Use the variable with the fallback.
+            src={thumbnailUrl}
             alt={video.title}
-            className={`w-full h-full object-cover absolute inset-0 transition-opacity duration-300 ${isHovered && !previewError ? 'opacity-0' : 'opacity-100'}`}
+            // FIX 3: Add the `fill` prop. This is required by Next.js for responsive images in a sized parent.
+            fill
+            // FIX 4: The className `w-full h-full` is now redundant because `fill` is used.
+            // The `absolute inset-0` is also handled by `fill`.
+            className={`object-cover transition-opacity duration-300 ${isHovered && !previewError ? 'opacity-0' : 'opacity-100'}`}
             loading="lazy"
-            onError={(e) => {
-              console.warn(`Thumbnail failed for video: ${video.title} (${video.publicId})`);
-              (e.target as HTMLImageElement).src = "/placeholder-video.png";
-            }}
+            // FIX 5: The previous onError handler won't work correctly with next/image.
+            // The fallback in `thumbnailUrl` handles missing IDs, which is the most common case.
         />
 
         {previewError && isHovered && (
