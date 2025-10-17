@@ -183,7 +183,7 @@ const SharedLibrariesPage = () => {
 
     useEffect(() => {
         fetchLibraries();
-    }, []);
+    }, [fetchLibraries]);
 
     const handleCreateLibrary = async (e: React.FormEvent) => {
         e.preventDefault();
