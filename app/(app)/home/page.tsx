@@ -6,10 +6,12 @@ import SubscriptionModal from "@/components/SubscriptionModal";
 import AddToLibraryModal from "@/components/AddToLibraryModal";
 import CommentModal from "@/components/CommentModal";
 import { useApiError, getErrorMessage } from "@/hooks/useApiError";
-import { Search, List, Grid, LayoutGrid, Film, HardDrive, FileDown, Clock, AlertTriangle, TrendingUp, Zap } from "lucide-react";
+import { Search, List, Grid, LayoutGrid, Film, HardDrive, Zap, Clock, AlertTriangle } from "lucide-react";
 import { filesize } from "filesize";
 import OnboardingTour from "@/components/OnboardingTour";
+import useDebounce from "@/hooks/useDebounce";
 
+// Define TypeScript interfaces for our data
 interface Video {
   id: string;
   title: string;
@@ -85,6 +87,8 @@ function Home() {
   const [selectedVideoIdForComment, setSelectedVideoIdForComment] = useState<string | null>(null);
   const { error, isLoading, executeWithErrorHandling, clearError } = useApiError();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
 
   useEffect(() => {
@@ -101,27 +105,33 @@ function Home() {
   };
 
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (query: string = "") => {
     const result = await executeWithErrorHandling(async () => {
-      const [videosResponse, statsResponse] = await Promise.all([
-        axios.get("/api/videos"),
-        axios.get("/api/user/statistics"),
-      ]);
+      // Don't fetch stats when searching
+      const endpoint = query ? `/api/videos?search=${query}` : "/api/videos";
+      const videosResponse = await axios.get(endpoint);
       const videos = videosResponse.data.success ? videosResponse.data.data.videos : videosResponse.data.videos;
-      const stats = statsResponse.data.success ? statsResponse.data.data : statsResponse.data;
       if (!Array.isArray(videos)) throw new Error("Unexpected video response format");
-      return { videos, stats };
+
+      if (!query) {
+        const statsResponse = await axios.get("/api/user/statistics");
+        const stats = statsResponse.data.success ? statsResponse.data.data : statsResponse.data;
+        return { videos, stats };
+      }
+      return { videos };
     });
 
     if (result) {
       setVideos(result.videos);
-      setStats(result.stats);
+      if (result.stats) {
+        setStats(result.stats);
+      }
     }
   }, [executeWithErrorHandling]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData(debouncedSearchQuery);
+  }, [debouncedSearchQuery, fetchData]);
 
   const handleSubscribed = () => {
     fetchData(); // Refetch data to update UI
@@ -188,6 +198,15 @@ function Home() {
     <div className="text-center py-16 bg-base-200 rounded-lg"><Film className="mx-auto w-16 h-16 text-gray-400 mb-4" /><h2 className="text-2xl font-semibold mb-2">Your Video Library is Empty</h2><p className="text-lg text-gray-500">Upload your first video to see it here.</p></div>
   );
 
+  const renderNoSearchResults = () => (
+      <div className="text-center py-16 bg-base-200 rounded-lg">
+          <Search className="mx-auto w-16 h-16 text-gray-400 mb-4" />
+          <h2 className="text-2xl font-semibold mb-2">No Videos Found</h2>
+          <p className="text-lg text-gray-500">Your search for &quot;{searchQuery}&quot; did not return any results.</p>
+      </div>
+  );
+
+
   return (
     <div className="container mx-auto p-4">
       {showOnboarding && <OnboardingTour onComplete={handleOnboardingComplete} />}
@@ -245,6 +264,8 @@ function Home() {
                 placeholder="Search videos..."
                 className="input input-bordered w-full max-w-xs pl-10"
                 aria-label="Search your videos"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <div className="dropdown dropdown-end">
@@ -275,9 +296,9 @@ function Home() {
           </div>
       </div>
 
-      {isLoading && !stats && renderLoading()}
-      {error && !isLoading && renderError()}
-      {!isLoading && !error && videos.length === 0 && renderNoVideos()}
+      {isLoading && renderLoading()}
+      {!isLoading && error && renderError()}
+      {!isLoading && !error && videos.length === 0 && (searchQuery ? renderNoSearchResults() : renderNoVideos())}
       
       {!isLoading && !error && videos.length > 0 && (
         <div className={`grid gap-6 ${thumbnailSize === 'small' ? 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-6' : thumbnailSize === 'medium' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
