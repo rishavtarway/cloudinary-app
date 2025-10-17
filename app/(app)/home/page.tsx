@@ -147,6 +147,13 @@ function Home() {
     setShowCommentModal(true);
   };
 
+  const handleViewChange = (size: ThumbnailSize) => {
+    setThumbnailSize(size);
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -247,19 +254,19 @@ function Home() {
                   <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </label>
-              <ul tabIndex={0} id="view-menu" className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32">
+              <ul tabIndex={0} id="view-menu" className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32 z-10">
                 <li>
-                  <a onClick={() => setThumbnailSize('small')}>
+                  <a onClick={() => handleViewChange('small')}>
                     <Grid className="w-4 h-4 mr-2" /> Small
                   </a>
                 </li>
                 <li>
-                  <a onClick={() => setThumbnailSize('medium')}>
+                  <a onClick={() => handleViewChange('medium')}>
                     <LayoutGrid className="w-4 h-4 mr-2" /> Medium
                   </a>
                 </li>
                 <li>
-                  <a onClick={() => setThumbnailSize('large')}>
+                  <a onClick={() => handleViewChange('large')}>
                     <List className="w-4 h-4 mr-2" /> Large
                   </a>
                 </li>
