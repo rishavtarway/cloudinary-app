@@ -85,6 +85,11 @@ export const ErrorTypes = {
   // General
   INTERNAL_ERROR: new AppError("Internal server error", 500, "INTERNAL_ERROR"),
   NETWORK_ERROR: new AppError("Network request failed", 503, "NETWORK_ERROR"),
+  STORAGE_LIMIT_EXCEEDED: new AppError(
+    "Storage limit exceeded",
+    402,
+    "STORAGE_LIMIT_EXCEEDED"
+  ),
 } as const;
 
 export function createErrorResponse(
