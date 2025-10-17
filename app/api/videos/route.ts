@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import {prisma} from "@/lib/prisma";
+import { NextResponse, NextRequest } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import {
   ErrorTypes,
@@ -8,7 +8,12 @@ import {
   AppError,
 } from "@/lib/error-handler";
 
-export async function GET() {
+// Define a more flexible type for the search conditions
+type SearchCondition = {
+    [key in 'title' | 'description']?: { contains: string; mode: "insensitive" };
+};
+
+export async function GET(request: NextRequest) {
   try {
     // Authenticate user
     const { userId } = await auth();
@@ -18,9 +23,25 @@ export async function GET() {
       });
     }
 
+    const { searchParams } = new URL(request.url);
+    const searchQuery = searchParams.get("search");
+
+    // Use Prisma's generated types for better type safety
+    const whereClause: {
+      userId: string;
+      OR?: SearchCondition[];
+    } = { userId };
+
+    if (searchQuery) {
+      whereClause.OR = [
+        { title: { contains: searchQuery, mode: "insensitive" } },
+        { description: { contains: searchQuery, mode: "insensitive" } },
+      ];
+    }
+
     // Fetch user's videos
     const videos = await prisma.video.findMany({
-      where: { userId },
+      where: whereClause,
       orderBy: { createdAt: "desc" },
     });
 
