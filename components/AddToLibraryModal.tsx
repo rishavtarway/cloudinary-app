@@ -8,8 +8,13 @@ interface AddToLibraryModalProps {
   onClose: () => void;
 }
 
+interface Library {
+  id: string;
+  name: string;
+}
+
 const AddToLibraryModal: React.FC<AddToLibraryModalProps> = ({ videoId, onClose }) => {
-  const [libraries, setLibraries] = useState<any[]>([]);
+  const [libraries, setLibraries] = useState<Library[]>([]);
   const [selectedLibrary, setSelectedLibrary] = useState("");
   const { error, isLoading, executeWithErrorHandling } = useApiError();
 

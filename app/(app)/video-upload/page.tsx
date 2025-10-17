@@ -1,8 +1,8 @@
 "use client";
 import React, { useState } from "react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
-import { useApiError, getErrorMessage } from "@/hooks/useApiError";
+import { useApiError, getErrorMessage, ApiError } from "@/hooks/useApiError";
 import SubscriptionModal from "@/components/SubscriptionModal";
 import { UploadCloud, File, X, CheckCircle } from 'lucide-react';
 
@@ -20,7 +20,7 @@ const VideoUpload = () => {
   const [description, setDescription] = useState("");
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const router = useRouter();
-  const { error, isLoading, clearError } = useApiError();
+  const { error, isLoading, executeWithErrorHandling, clearError } = useApiError();
   const [isDragOver, setIsDragOver] = useState(false);
 
   const MAX_FILE_SIZE = 60 * 1024 * 1024;
@@ -64,7 +64,7 @@ const VideoUpload = () => {
   }
 
   const handleSubscribed = () => {
-    handleSubmit(new Event('submit') as any);
+    handleSubmit(new Event('submit') as unknown as React.FormEvent);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -104,14 +104,25 @@ const VideoUpload = () => {
           },
         });
         setFiles(prev => prev.map(f => f.id === uploadableFile.id ? { ...f, status: 'success' } : f));
-      } catch (err: any) {
+      } catch (err: unknown) {
         allUploadsSuccessful = false;
-        const errorMessage = getErrorMessage(err.response?.data);
-        setFiles(prev => prev.map(f => f.id === uploadableFile.id ? { ...f, status: 'error', error: errorMessage } : f));
         
-        if (err.response?.data?.code === "STORAGE_LIMIT_EXCEEDED") {
-          setShowSubscriptionModal(true);
+        let errorMessage = "An unknown error occurred.";
+        if (axios.isAxiosError(err)) {
+            const axiosError = err as AxiosError<ApiError>;
+            if (axiosError.response?.data) {
+                const errorData: ApiError = {
+                    message: axiosError.response.data.message ?? 'An error occurred.',
+                    code: axiosError.response.data.code,
+                };
+                errorMessage = getErrorMessage(errorData);
+                if (axiosError.response.data.code === "STORAGE_LIMIT_EXCEEDED") {
+                    setShowSubscriptionModal(true);
+                }
+            }
         }
+        
+        setFiles(prev => prev.map(f => f.id === uploadableFile.id ? { ...f, status: 'error', error: errorMessage } : f));
       }
     }
     
