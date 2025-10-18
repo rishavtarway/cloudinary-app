@@ -9,7 +9,7 @@ import {
 
 export async function GET(
   request: Request,
-  { params }: { params: { videoId: string } }
+  { params }: { params: Promise<{ videoId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -17,8 +17,11 @@ export async function GET(
       throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
     }
 
+    // Await params
+    const { videoId } = await params;
+
     const comments = await prisma.comment.findMany({
-      where: { videoId: params.videoId },
+      where: { videoId },
       include: {
         user: {
           select: { userId: true },
@@ -42,13 +45,16 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { videoId: string } }
+  { params }: { params: Promise<{ videoId: string }> }
 ) {
   try {
     const { userId } = await auth();
     if (!userId) {
       throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
     }
+
+    // Await params
+    const { videoId } = await params;
 
     const { text } = await request.json();
 
@@ -60,7 +66,7 @@ export async function POST(
       data: {
         text,
         userId,
-        videoId: params.videoId,
+        videoId,
       },
     });
 

@@ -9,13 +9,16 @@ import {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { libraryId: string } }
+  { params }: { params: Promise<{ libraryId: string }> }
 ) {
   try {
     const { userId: ownerId } = await auth();
     if (!ownerId) {
       throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
     }
+
+    // Await params
+    const { libraryId } = await params;
 
     const { email } = await request.json();
 
@@ -25,7 +28,7 @@ export async function POST(
 
     const library = await prisma.library.findFirst({
       where: {
-        id: params.libraryId,
+        id: libraryId,
         ownerId: ownerId,
       },
     });
@@ -38,9 +41,9 @@ export async function POST(
       );
     }
 
-    // FIX: Await the result of calling clerkClient() 
-    const client = await clerkClient(); // Await the function call
-    const users = await client.users.getUserList({ emailAddress: [email] }); // Use the resolved client
+    // Await the result of calling clerkClient() 
+    const client = await clerkClient();
+    const users = await client.users.getUserList({ emailAddress: [email] });
 
     if (users.data.length === 0) {
       throw new AppError(
@@ -76,7 +79,7 @@ export async function POST(
     // Check if the member is already in the library
     const isAlreadyMember = await prisma.library.findFirst({
         where: {
-            id: params.libraryId,
+            id: libraryId,
             memberIDs: { has: member.id }
         }
     });
@@ -89,9 +92,8 @@ export async function POST(
         );
     }
 
-
     const updatedLibrary = await prisma.library.update({
-      where: { id: params.libraryId },
+      where: { id: libraryId },
       data: {
         members: {
           connect: { id: member.id },
@@ -112,13 +114,16 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { libraryId: string; memberId: string } }
+  { params }: { params: Promise<{ libraryId: string }> }
 ) {
   try {
     const { userId: ownerId } = await auth();
     if (!ownerId) {
       throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
     }
+
+    // Await params
+    const { libraryId } = await params;
 
     const memberClerkId = request.nextUrl.searchParams.get("memberId");
 
@@ -127,7 +132,7 @@ export async function DELETE(
      }
 
     const library = await prisma.library.findFirst({
-      where: { id: params.libraryId, ownerId },
+      where: { id: libraryId, ownerId },
     });
 
     if (!library) {
@@ -138,13 +143,12 @@ export async function DELETE(
       where: { userId: memberClerkId },
     });
 
-
     if (!member) {
       throw new AppError("Member not found", 404, "NOT_FOUND");
     }
 
     await prisma.library.update({
-      where: { id: params.libraryId },
+      where: { id: libraryId },
       data: {
         members: {
           disconnect: { id: member.id },

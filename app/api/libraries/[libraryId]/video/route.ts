@@ -1,5 +1,4 @@
 // app/api/libraries/[libraryId]/videos/route.ts
-
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
@@ -9,17 +8,23 @@ import {
   AppError,
 } from "@/lib/error-handler";
 
-export async function POST(request: Request, { params }: { params: { libraryId: string } }) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ libraryId: string }> }
+) {
   try {
     const { userId } = await auth();
     if (!userId) {
       throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
     }
 
+    // Await params
+    const { libraryId } = await params;
+
     const { videoId } = await request.json();
 
     const library = await prisma.library.update({
-      where: { id: params.libraryId },
+      where: { id: libraryId },
       data: {
         videos: {
           connect: { id: videoId },
@@ -38,7 +43,7 @@ export async function POST(request: Request, { params }: { params: { libraryId: 
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { libraryId: string; videoId: string } }
+  { params }: { params: Promise<{ libraryId: string; videoId: string }> }
 ) {
   try {
     const { userId: ownerId } = await auth();
@@ -46,8 +51,11 @@ export async function DELETE(
       throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
     }
 
+    // Await params
+    const { libraryId, videoId } = await params;
+
     const library = await prisma.library.findFirst({
-      where: { id: params.libraryId, ownerId },
+      where: { id: libraryId, ownerId },
     });
 
     if (!library) {
@@ -55,10 +63,10 @@ export async function DELETE(
     }
 
     await prisma.library.update({
-      where: { id: params.libraryId },
+      where: { id: libraryId },
       data: {
         videos: {
-          disconnect: { id: params.videoId },
+          disconnect: { id: videoId },
         },
       },
     });

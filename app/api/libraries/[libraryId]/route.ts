@@ -9,7 +9,7 @@ import {
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { libraryId: string } }
+  { params }: { params: Promise<{ libraryId: string }> }
 ) {
   try {
     const { userId: ownerId } = await auth();
@@ -17,10 +17,13 @@ export async function DELETE(
       throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
     }
 
+    // Await params
+    const { libraryId } = await params;
+
     // Find the library to ensure the current user is the owner before deleting
     const library = await prisma.library.findFirst({
       where: {
-        id: params.libraryId,
+        id: libraryId,
         ownerId: ownerId,
       },
     });
@@ -36,7 +39,7 @@ export async function DELETE(
     // Delete the library
     await prisma.library.delete({
       where: {
-        id: params.libraryId,
+        id: libraryId,
       },
     });
 
