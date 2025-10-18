@@ -12,7 +12,8 @@ import {
   AppError,
 } from "@/lib/error-handler";
 
-export const maxDuration = 300; // Increase the timeout to 5 minutes
+// FIXED: Changed from 300 to 60 for Hobby plan
+export const maxDuration = 60; // Maximum allowed for Vercel Hobby plan
 
 // Cloudinary Configuration
 cloudinary.config({
