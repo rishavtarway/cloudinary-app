@@ -8,7 +8,7 @@ import {
 } from "@/lib/error-handler";
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { libraryId: string } }
 ) {
   try {
@@ -38,8 +38,9 @@ export async function POST(
       );
     }
 
-    const client = await clerkClient();
-    const users = await client.users.getUserList({ emailAddress: [email] });
+    // FIX: Await the result of calling clerkClient() 
+    const client = await clerkClient(); // Await the function call
+    const users = await client.users.getUserList({ emailAddress: [email] }); // Use the resolved client
 
     if (users.data.length === 0) {
       throw new AppError(
@@ -72,6 +73,23 @@ export async function POST(
       );
     }
 
+    // Check if the member is already in the library
+    const isAlreadyMember = await prisma.library.findFirst({
+        where: {
+            id: params.libraryId,
+            memberIDs: { has: member.id }
+        }
+    });
+
+    if (isAlreadyMember) {
+        throw new AppError(
+            "User is already a member of this library.",
+            400,
+            "BAD_REQUEST"
+        );
+    }
+
+
     const updatedLibrary = await prisma.library.update({
       where: { id: params.libraryId },
       data: {
@@ -82,14 +100,13 @@ export async function POST(
     });
 
     return NextResponse.json(
-      createSuccessResponse(updatedLibrary, "Member added successfully")
+      createSuccessResponse({ id: updatedLibrary.id, name: updatedLibrary.name }, "Member added successfully")
     );
   } catch (error) {
     console.error("Error adding member:", error);
     const errorResponse = handleApiError(error);
-    return NextResponse.json(errorResponse, {
-      status: error instanceof AppError ? error.statusCode : 500,
-    });
+    const status = error instanceof AppError ? error.statusCode : 500;
+    return NextResponse.json(errorResponse, { status });
   }
 }
 
@@ -103,6 +120,12 @@ export async function DELETE(
       throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
     }
 
+    const memberClerkId = request.nextUrl.searchParams.get("memberId");
+
+     if (!memberClerkId) {
+       throw new AppError("Member ID is required in query parameters", 400, "VALIDATION_ERROR");
+     }
+
     const library = await prisma.library.findFirst({
       where: { id: params.libraryId, ownerId },
     });
@@ -111,16 +134,15 @@ export async function DELETE(
       throw new AppError("Library not found or you are not the owner", 404, "NOT_FOUND");
     }
 
-    // Find the member by their Clerk User ID to get their internal DB ID
     const member = await prisma.user.findUnique({
-      where: { userId: params.memberId },
+      where: { userId: memberClerkId },
     });
+
 
     if (!member) {
       throw new AppError("Member not found", 404, "NOT_FOUND");
     }
 
-    // Disconnect the member from the library
     await prisma.library.update({
       where: { id: params.libraryId },
       data: {
@@ -134,8 +156,7 @@ export async function DELETE(
   } catch (error) {
     console.error("Error removing member:", error);
     const errorResponse = handleApiError(error);
-    return NextResponse.json(errorResponse, {
-      status: error instanceof AppError ? error.statusCode : 500,
-    });
+    const status = error instanceof AppError ? error.statusCode : 500;
+    return NextResponse.json(errorResponse, { status });
   }
 }
