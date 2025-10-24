@@ -7,7 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
+// Enum for workspace roles
+enum WorkspaceRole {
   OWNER
   EDITOR
   VIEWER
@@ -22,111 +23,108 @@ model Video {
   compressedSize String
   duration       Float
   userId         String // Clerk User ID of the uploader
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  user           User     @relation(fields: [userId], references: [userId]) // Relation to the User model via Clerk ID
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [userId]) // Relation to User model via Clerk ID
 
-  // Removed direct library relation, link via Workspace/Library structure
-  // libraries      Library[] @relation(fields: [libraryIDs], references: [id])
-  // libraryIDs     String[]  @db.ObjectId
+  // Relation to Workspaces (many-to-many)
+  workspaces     Workspace[] @relation("WorkspaceVideos", fields: [workspaceIDs], references: [id])
+  workspaceIDs   String[]    @db.ObjectId
 
-  // Add relation to the library it belongs to (a video belongs to one library)
-  libraryId String?  @db.ObjectId
-  library   Library? @relation(fields: [libraryId], references: [id])
-
-  comments   Comment[]
-  shareLinks ShareLink[] // Share links specifically for this video
+  comments       Comment[]
+  shareLinks     ShareLink[] @relation("VideoShareLinks") // Videos can have multiple share links
 }
 
-// Library now belongs to a Workspace
-model Library {
+// Renamed Library to Workspace and added roles/memberships
+model Workspace {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   name        String
-  workspaceId String    @db.ObjectId
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  videos      Video[] // Videos contained within this library
+  ownerId     String // Clerk User ID of the owner
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  // Removed ownerId, owner, members, memberIDs - handled by WorkspaceMembership
+  owner       User      @relation("OwnedWorkspaces", fields: [ownerId], references: [userId])
+  memberships Membership[] // Relation to membership records
+
+  // Relation to Videos (many-to-many)
+  videos      Video[]   @relation("WorkspaceVideos", fields: [videoIDs], references: [id])
+  videoIDs    String[]  @db.ObjectId
+
+  shareLinks  ShareLink[] @relation("WorkspaceShareLinks") // Workspaces can have multiple share links
+  activityLog ActivityLog[] // Added activity log relation
 }
 
-// New Workspace model
-model Workspace {
-  id           String                @id @default(auto()) @map("_id") @db.ObjectId
-  name         String
-  memberships  WorkspaceMembership[]
-  libraries    Library[]
-  activityLogs ActivityLog[] // Added for audit trail
-  createdAt    DateTime              @default(now())
-  updatedAt    DateTime              @updatedAt
-}
+// Membership model to link Users and Workspaces with Roles
+model Membership {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  role        WorkspaceRole
+  userId      String // Clerk User ID of the member
+  workspaceId String        @db.ObjectId
+  createdAt   DateTime      @default(now())
 
-// Explicit join table for Users and Workspaces with Roles
-model WorkspaceMembership {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  workspaceId String    @db.ObjectId
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  userId      String // Clerk User ID
-  user        User      @relation(fields: [userId], references: [userId])
-  role        Role
-  joinedAt    DateTime  @default(now())
+  user        User          @relation(fields: [userId], references: [userId])
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id])
 
-  @@unique([workspaceId, userId]) // Ensure a user has only one role per workspace
+  @@unique([userId, workspaceId]) // Ensure a user is only in a workspace once
 }
 
 model User {
-  id                   String                @id @default(auto()) @map("_id") @db.ObjectId // Internal Prisma ID
-  userId               String                @unique // Clerk User ID
-  isSubscribed         Boolean               @default(false)
-  storageQuota         BigInt                @default(41943040) // 40MB in bytes
-  videos               Video[] // Videos uploaded by this user
-  // ownedLibraries     Library[] @relation("OwnedLibraries") // Removed, ownership is via WorkspaceMembership
-  // sharedLibraries    Library[] @relation("SharedLibraries", fields: [sharedLibraryIDs], references: [id]) // Removed
-  // sharedLibraryIDs   String[]  @db.ObjectId // Removed
-  workspaceMemberships WorkspaceMembership[] // User's memberships in different workspaces
-  comments             Comment[]
-  activityLogs         ActivityLog[] // Actions performed by the user
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId // Internal DB ID
+  userId             String    @unique // Clerk User ID
+  isSubscribed       Boolean   @default(false)
+  storageQuota       BigInt    @default(41943040) // 40MB in bytes
+
+  videos             Video[] // Videos uploaded by the user
+  ownedWorkspaces    Workspace[] @relation("OwnedWorkspaces") // Workspaces owned by the user
+  memberships        Membership[] // Workspaces the user is a member of
+
+  comments           Comment[]
+  activityLog        ActivityLog[] // Added activity log relation
 }
 
-// Enhanced Comment model
 model Comment {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   text      String
-  timestamp Float? // Optional timestamp in seconds related to the video
+  timestamp Float?   // Optional timestamp in seconds
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId    String // Clerk User ID of the commenter
+  userId    String   // Clerk User ID
   user      User     @relation(fields: [userId], references: [userId])
   videoId   String   @db.ObjectId
   video     Video    @relation(fields: [videoId], references: [id])
-  // Optional: Add mentionedUserIds if you implement mentions
+
+  // Store mentions if needed, e.g., array of mentioned Clerk User IDs
   // mentionedUserIds String[]
 }
 
-// New ShareLink model (starting with Video sharing)
+// Model for Share Links
 model ShareLink {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  videoId   String    @db.ObjectId
-  video     Video     @relation(fields: [videoId], references: [id])
-  linkToken String    @unique // Unique token for the public link
-  password  String? // Hashed password
-  expiresAt DateTime?
-  viewCount Int       @default(0)
-  createdBy String // Clerk User ID who created the link
-  createdAt DateTime  @default(now())
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  token        String    @unique @default(uuid()) // Unique token for the link
+  resourceId   String    @db.ObjectId // ID of the Video or Workspace
+  resourceType String    // "video" or "workspace"
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime? // Optional expiry date
+  passwordHash String?   // Optional hashed password
+  viewCount    Int       @default(0)
 
-  // Add constraints if needed, e.g., @@index([linkToken])
+  // Relation back to the resource
+  video        Video?     @relation("VideoShareLinks", fields: [resourceId], references: [id])
+  workspace    Workspace? @relation("WorkspaceShareLinks", fields: [resourceId], references: [id])
+
+  @@index([resourceId, resourceType])
 }
 
-// New ActivityLog model (basic structure)
+// Model for Activity Log
 model ActivityLog {
-  id          String     @id @default(auto()) @map("_id") @db.ObjectId
-  action      String // e.g., "VIDEO_UPLOADED", "MEMBER_ADDED", "COMMENT_CREATED"
-  timestamp   DateTime   @default(now())
-  userId      String // Clerk User ID who performed the action
-  user        User       @relation(fields: [userId], references: [userId])
-  workspaceId String?    @db.ObjectId // Optional: Link activity to a workspace
-  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
-  details     Json? // Store relevant details like videoId, memberId, etc.
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  action      String    // e.g., "VIDEO_UPLOADED", "MEMBER_ADDED", "COMMENT_POSTED"
+  timestamp   DateTime  @default(now())
+  userId      String    // Clerk User ID performing the action
+  user        User      @relation(fields: [userId], references: [userId])
+  workspaceId String    @db.ObjectId
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  details     Json?     // Store additional context like videoId, mentionedUserId, etc.
+
+  @@index([workspaceId, timestamp])
 }
