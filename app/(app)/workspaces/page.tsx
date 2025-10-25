@@ -530,11 +530,12 @@ const WorkspaceDetailView = ({
         />
       )}
       {showShareModal && (
-        <ShareModal 
-          resourceId={workspace.id} 
-          resourceType="workspace" 
-          resourceName={workspace.name} 
-          onClose={() => setShareShareModal(false)} 
+        <ShareModal
+          resourceId={workspace.id}
+          resourceType="workspace"
+          resourceName={workspace.name}
+          // Corrected line below:
+          onClose={() => setShowShareModal(false)}
         />
       )}
       {showCommentModal && selectedVideoIdForComment && (
