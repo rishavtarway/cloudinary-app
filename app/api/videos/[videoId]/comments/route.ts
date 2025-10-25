@@ -9,7 +9,38 @@ import {
 } from "@/lib/error-handler";
 import { hasWorkspaceAccessThroughVideo } from "@/lib/workspace-permissions"; // Assume helper
 
-// GET remains the same, just ensure include user.userId
+// Add this GET handler 
+export async function GET(
+  request: Request, // Added request parameter
+  { params }: { params: { videoId: string } }
+) {
+  try {
+    const { userId } = await auth();
+    if (!userId) throw ErrorTypes.UNAUTHORIZED;
+
+    const { videoId } = params;
+
+    // Permission Check: User needs access to the workspace containing the video
+    await hasWorkspaceAccessThroughVideo(userId, videoId, ['OWNER', 'EDITOR', 'VIEWER']);
+    
+
+    const comments = await prisma.comment.findMany({
+      where: { videoId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { userId: true } } // Include Clerk user ID
+      }
+    });
+
+    return NextResponse.json(createSuccessResponse(comments, "Comments fetched successfully"));
+
+  } catch (error) {
+    const errorResponse = handleApiError(error);
+    return NextResponse.json(errorResponse, {
+      status: error instanceof AppError ? error.statusCode : 500,
+    });
+  }
+}
 
 export async function POST(
   request: Request,
@@ -21,10 +52,8 @@ export async function POST(
 
     const { videoId } = params; // Directly access videoId
 
-    // --- Permission Check: User needs access to the workspace containing the video ---
+    // Permission Check: User needs access to the workspace containing the video
      await hasWorkspaceAccessThroughVideo(userId, videoId, ['OWNER', 'EDITOR', 'VIEWER']);
-    // --- End Permission Check ---
-
 
     const { text, timestamp } = await request.json();
 
@@ -45,7 +74,6 @@ export async function POST(
         timestamp: timestamp ?? null, // Store null if not provided
         userId, // Clerk User ID
         videoId,
-        // mentionedUserIds, // Store if implementing mentions
       },
        include: {
           user: { select: { userId: true } } // Include Clerk ID in response
