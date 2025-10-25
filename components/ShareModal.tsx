@@ -38,7 +38,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ resourceId, resourceType, resou
                      // Parse as local time, then convert to ISO string (which will be UTC 'Z')
                      payload.expiresAt = new Date(expiresAt).toISOString();
                  } catch (e) {
-                     console.error("Invalid date format:", expiresAt);
+                     console.error("Invalid date format:", expiresAt+"", e);
                      throw new Error("Invalid expiry date format."); // Let useApiError catch this
                  }
             }

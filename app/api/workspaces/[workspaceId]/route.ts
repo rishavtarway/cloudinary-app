@@ -9,17 +9,18 @@ import {
 } from "@/lib/error-handler";
 import { hasWorkspaceAccess } from "@/lib/workspace-permissions"; // Assume this helper exists
 
-// GET /api/workspaces/[workspaceId] - Get details for a single workspace
+
 export async function GET(
   request: Request,
-  { params }: { params: { workspaceId: string } }
+  { params }: { params: Promise<{ workspaceId: string }> }
 ) {
+  let workspaceId = '';
   try {
     const { userId } = await auth();
-    const { workspaceId } = params;
+    workspaceId = (await params).workspaceId;
     if (!userId) throw ErrorTypes.UNAUTHORIZED;
 
-    const { workspace, role } = await hasWorkspaceAccess(userId, workspaceId, ['OWNER', 'EDITOR', 'VIEWER']); // Check if user has any access
+    const { role } = await hasWorkspaceAccess(userId, workspaceId, ['OWNER', 'EDITOR', 'VIEWER']); // Check if user has any access
 
     // Include videos, members, etc.
     const workspaceDetails = await prisma.workspace.findUnique({
@@ -41,9 +42,6 @@ export async function GET(
 
     if (!workspaceDetails) throw ErrorTypes.RECORD_NOT_FOUND;
 
-
-     // Format response
-     // eslint-disable-next-line @typescript-eslint/no-unused-vars
      const { memberships, ...rest } = workspaceDetails;
      const responseData = {
         ...rest,
@@ -54,21 +52,21 @@ export async function GET(
     return NextResponse.json(createSuccessResponse(responseData));
 
   } catch (error) {
-     console.error(`Error fetching workspace ${params.workspaceId}:`, error);
+     console.error(`Error fetching workspace ${workspaceId}:`, error);
      const errorResponse = handleApiError(error);
      return NextResponse.json(errorResponse, { status: error instanceof AppError ? error.statusCode : 500 });
   }
 }
 
-
-// DELETE /api/workspaces/[workspaceId] - Delete a workspace (Owner only)
 export async function DELETE(
   request: Request,
-  { params }: { params: { workspaceId: string } }
+  { params }: { params: Promise<{ workspaceId: string }> }
 ) {
+
+  let workspaceId = '';
   try {
     const { userId } = await auth();
-    const { workspaceId } = params;
+    workspaceId  = (await params).workspaceId;
     if (!userId) throw ErrorTypes.UNAUTHORIZED;
 
     // Ensure the user is the OWNER
@@ -89,20 +87,21 @@ export async function DELETE(
 
     return NextResponse.json(createSuccessResponse(null, "Workspace deleted successfully"));
   } catch (error) {
-    console.error(`Error deleting workspace ${params.workspaceId}:`, error);
+    console.error(`Error deleting workspace ${workspaceId}:`, error);
     const errorResponse = handleApiError(error);
     return NextResponse.json(errorResponse, { status: error instanceof AppError ? error.statusCode : 500 });
   }
 }
 
-// PATCH /api/workspaces/[workspaceId] - Update workspace details (Owner/Editor only)
+
 export async function PATCH(
     request: Request,
-    { params }: { params: { workspaceId: string } }
+    { params }: { params: Promise<{ workspaceId: string }> }
 ) {
+    let workspaceId = '';
     try {
         const { userId } = await auth();
-        const { workspaceId } = params;
+        workspaceId  = (await params).workspaceId;
         if (!userId) throw ErrorTypes.UNAUTHORIZED;
 
         // Ensure OWNER or EDITOR access
@@ -131,7 +130,7 @@ export async function PATCH(
         return NextResponse.json(createSuccessResponse(updatedWorkspace, "Workspace updated successfully"));
 
     } catch (error) {
-        console.error(`Error updating workspace ${params.workspaceId}:`, error);
+        console.error(`Error updating workspace ${workspaceId}:`, error);
         const errorResponse = handleApiError(error);
         return NextResponse.json(errorResponse, { status: error instanceof AppError ? error.statusCode : 500 });
     }

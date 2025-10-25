@@ -1,6 +1,6 @@
 // lib/workspace-permissions.ts
 import { prisma } from "@/lib/prisma";
-import { AppError, ErrorTypes } from "@/lib/error-handler";
+import { ErrorTypes } from "@/lib/error-handler";
 import { WorkspaceRole, Workspace } from "@prisma/client";
 
 /**

@@ -7,10 +7,11 @@ import bcrypt from 'bcryptjs';
 // GET /api/public/share/[token] - Fetch shared resource details (handles password check via POST)
 export async function GET(
     request: Request,
-    { params }: { params: { token: string } }
+    { params }: { params: Promise<{ token: string }> }
 ) {
+    let token ='';
     try {
-        const { token } = params;
+        token = (await params).token;
         if (!token) throw new AppError("Token is required", 400);
 
         const shareLink = await prisma.shareLink.findUnique({ where: { token } });
@@ -55,7 +56,7 @@ export async function GET(
         return NextResponse.json(createSuccessResponse(resourceData, "Resource fetched successfully"));
 
     } catch (error) {
-        console.error(`Error fetching public share link ${params.token}:`, error);
+        console.error(`Error fetching public share link ${token}:`, error);
         const errorResponse = handleApiError(error);
         return NextResponse.json(errorResponse, { status: error instanceof AppError ? error.statusCode : 500 });
     }
@@ -65,10 +66,11 @@ export async function GET(
 // POST /api/public/share/[token] - Verify password and fetch resource
 export async function POST(
     request: Request,
-    { params }: { params: { token: string } }
+    { params }: { params: Promise<{ token: string }> }
 ) {
+    let token ='';
      try {
-        const { token } = params;
+        token = (await params).token;
         if (!token) throw new AppError("Token is required", 400);
 
         const { password } = await request.json();
@@ -116,7 +118,7 @@ export async function POST(
         return NextResponse.json(createSuccessResponse(resourceData, "Resource fetched successfully"));
 
     } catch (error) {
-        console.error(`Error verifying password for share link ${params.token}:`, error);
+        console.error(`Error verifying password for share link ${token}:`, error);
         const errorResponse = handleApiError(error);
         return NextResponse.json(errorResponse, { status: error instanceof AppError ? error.statusCode : 500 });
     }

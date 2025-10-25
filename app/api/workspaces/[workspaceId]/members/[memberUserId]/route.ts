@@ -13,11 +13,11 @@ import { hasWorkspaceAccess } from "@/lib/workspace-permissions";
 // DELETE /api/workspaces/[workspaceId]/members/[memberUserId] - Remove a member
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { workspaceId: string; memberUserId: string } }
+  { params }: { params: Promise<{ workspaceId: string; memberUserId: string }> }
 ) {
   try {
     const { userId: currentUserId } = await auth();
-    const { workspaceId, memberUserId: targetUserId } = params;
+    const { workspaceId, memberUserId: targetUserId } = await params;
     if (!currentUserId) throw ErrorTypes.UNAUTHORIZED;
 
     // Ensure the current user is OWNER or EDITOR
@@ -69,11 +69,11 @@ export async function DELETE(
 // PATCH /api/workspaces/[workspaceId]/members/[memberUserId] - Update member role
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { workspaceId: string; memberUserId: string } }
+    { params }: { params: Promise<{ workspaceId: string; memberUserId: string }> }
 ) {
     try {
         const { userId: currentUserId } = await auth();
-        const { workspaceId, memberUserId: targetUserId } = params;
+        const { workspaceId, memberUserId: targetUserId } = await params;
         if (!currentUserId) throw ErrorTypes.UNAUTHORIZED;
 
         // Only owners can change roles

@@ -12,15 +12,16 @@ import { hasWorkspaceAccess } from "@/lib/workspace-permissions";
 
 export async function POST(
   request: Request,
-  { params }: { params: { workspaceId: string } } 
+  { params }: { params: Promise<{ workspaceId: string }> } 
 ) {
+  let workspaceId = '';
   try {
     const { userId } = await auth();
     if (!userId) {
       throw ErrorTypes.UNAUTHORIZED; 
     }
 
-    const { workspaceId } = params; 
+    workspaceId = (await params).workspaceId;
 
     // Permission Check: Ensure user can edit the workspace 
     await hasWorkspaceAccess(userId, workspaceId, ['OWNER', 'EDITOR']);
@@ -52,7 +53,7 @@ export async function POST(
 
     return NextResponse.json(createSuccessResponse(updatedWorkspace, "Video added to workspace successfully"));
   } catch (error) {
-    console.error(`Error adding video to workspace ${params.workspaceId}:`, error); 
+    console.error(`Error adding video to workspace ${workspaceId}:`, error); 
     const errorResponse = handleApiError(error);
     return NextResponse.json(errorResponse, {
       status: error instanceof AppError ? error.statusCode : 500,
@@ -62,15 +63,17 @@ export async function POST(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { workspaceId: string } } 
+  { params }: { params: Promise<{ workspaceId: string }> } 
 ) {
+  
+  let workspaceId = '';
   try {
     const { userId } = await auth();
     if (!userId) {
       throw ErrorTypes.UNAUTHORIZED;
     }
 
-    const { workspaceId } = params; // Use correct param name
+    workspaceId  = (await params).workspaceId; // Use correct param name
 
     await hasWorkspaceAccess(userId, workspaceId, ['OWNER', 'EDITOR']);
 
@@ -99,7 +102,7 @@ export async function DELETE(
 
     return NextResponse.json(createSuccessResponse(null, "Video removed from workspace successfully"));
   } catch (error) {
-    console.error(`Error removing video from workspace ${params.workspaceId}:`, error); // Log with context
+    console.error(`Error removing video from workspace ${workspaceId}:`, error); // Log with context
     const errorResponse = handleApiError(error);
     return NextResponse.json(errorResponse, {
       status: error instanceof AppError ? error.statusCode : 500,

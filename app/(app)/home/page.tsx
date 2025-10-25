@@ -1,6 +1,6 @@
-// app/(app)/home/page.tsx
+
 "use client";
-import React, { useState, useEffect, useCallback, useRef } from "react"; // useRef is still used, but differently
+import React, { useState, useEffect, useCallback } from "react"; // useRef is still used, but differently
 import axios from "axios";
 import VideoCard from "@/components/VideoCard";
 import SubscriptionModal from "@/components/SubscriptionModal";
@@ -128,7 +128,7 @@ function Home() {
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   // State to hold the ref of the video player FOR THE CURRENTLY OPEN comment modal
   const [activeVideoRef, setActiveVideoRef] =
-    useState<React.RefObject<HTMLVideoElement> | null>(null);
+    useState<React.RefObject<HTMLVideoElement | null> | null>(null);
 
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem("hasSeenOnboardingTour");
@@ -209,7 +209,7 @@ function Home() {
   // **UPDATED**: Accepts the ref from VideoCard
   const handleComment = (
     videoId: string,
-    videoPlayerRef: React.RefObject<HTMLVideoElement>
+    videoPlayerRef: React.RefObject<HTMLVideoElement | null>
   ) => {
     setSelectedVideoIdForComment(videoId);
     setActiveVideoRef(videoPlayerRef); // Store the ref for the modal

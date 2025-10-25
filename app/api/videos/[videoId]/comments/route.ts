@@ -12,13 +12,13 @@ import { hasWorkspaceAccessThroughVideo } from "@/lib/workspace-permissions"; //
 // Add this GET handler 
 export async function GET(
   request: Request, // Added request parameter
-  { params }: { params: { videoId: string } }
+  { params }: { params: Promise< { videoId: string }> }
 ) {
   try {
     const { userId } = await auth();
     if (!userId) throw ErrorTypes.UNAUTHORIZED;
 
-    const { videoId } = params;
+    const { videoId } = await params;
 
     // Permission Check: User needs access to the workspace containing the video
     await hasWorkspaceAccessThroughVideo(userId, videoId, ['OWNER', 'EDITOR', 'VIEWER']);
@@ -44,13 +44,13 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { videoId: string } } // Adjusted params type
+  { params }: { params: Promise<{ videoId: string }> } // Adjusted params type
 ) {
   try {
     const { userId } = await auth();
     if (!userId) throw ErrorTypes.UNAUTHORIZED;
 
-    const { videoId } = params; // Directly access videoId
+    const { videoId } = await params; // Directly access videoId
 
     // Permission Check: User needs access to the workspace containing the video
      await hasWorkspaceAccessThroughVideo(userId, videoId, ['OWNER', 'EDITOR', 'VIEWER']);

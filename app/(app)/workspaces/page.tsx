@@ -17,6 +17,12 @@ interface MemberInfo {
   userId: string; 
   role: WorkspaceRole; 
 }
+interface CommentInfo {
+  id: string;
+  text: string;
+  userId: string;
+  createdAt: string;
+}
 
 interface VideoInfo { 
   id: string; 
@@ -52,7 +58,7 @@ interface WorkspaceSummary {
 
 // Comment Modal Component
 const CommentModal = ({ videoId, onClose }: { videoId: string; onClose: () => void; }) => {
-  const [comments, setComments] = useState<any[]>([]);
+  const [comments, setComments] = useState<CommentInfo[]>([]);
   const [newComment, setNewComment] = useState("");
   const { executeWithErrorHandling, isLoading } = useApiError();
 
@@ -637,7 +643,6 @@ const WorkspaceDetailView = ({
 // ====================
 
 const WorkspacesPage = () => {
-  const { user } = useUser();
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);

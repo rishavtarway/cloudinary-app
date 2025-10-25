@@ -39,7 +39,7 @@ export async function GET() {
     const workspacesWithRoles = workspaces.map(ws => {
       const membership = ws.memberships.find(m => m.userId === userId);
       const role = ws.ownerId === userId ? 'OWNER' : membership?.role;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       const { memberships, ...rest } = ws; // Exclude detailed memberships array from main response if not needed
       return { ...rest, userRole: role, videoCount: ws._count.videos, memberCount: memberships.length + 1 }; // +1 for owner
     });
@@ -102,7 +102,6 @@ export async function POST(request: Request) {
 
      // Format response similarly to GET
      const role = 'OWNER';
-     // eslint-disable-next-line @typescript-eslint/no-unused-vars
      const { memberships, ...rest } = workspace;
      const responseData = { ...rest, userRole: role, videoCount: workspace._count.videos, memberCount: memberships.length };
 

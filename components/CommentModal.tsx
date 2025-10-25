@@ -21,7 +21,7 @@ interface Comment {
 interface CommentModalProps {
   videoId: string;
   onClose: () => void;
-  videoPlayerRef?: React.RefObject<HTMLVideoElement>; // Optional ref to get timestamp
+  videoPlayerRef?: React.RefObject<HTMLVideoElement | null>; // Optional ref to get timestamp
 }
 
 const CommentModal: React.FC<CommentModalProps> = ({ videoId, onClose, videoPlayerRef }) => {

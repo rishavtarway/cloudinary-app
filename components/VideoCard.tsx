@@ -29,7 +29,7 @@ interface VideoCardProps {
   video: Video;
   onDownload?: (url: string, title: string) => void;
   onAddToWorkspace?: (videoId: string) => void;
-  onComment?: (videoId: string, videoPlayerRef: React.RefObject<HTMLVideoElement>) => void;
+  onComment?: (videoId: string, videoPlayerRef: React.RefObject<HTMLVideoElement | null>) => void;
   onShare?: (video: Video) => void;
   thumbnailSize?: keyof typeof thumbnailSizes;
 }

@@ -13,11 +13,11 @@ import { hasWorkspaceAccess } from "@/lib/workspace-permissions";
 // POST /api/workspaces/[workspaceId]/members - Add a member
 export async function POST(
   request: NextRequest,
-  { params }: { params: { workspaceId: string } }
+  { params }: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     const { userId: currentUserId } = await auth();
-    const { workspaceId } = params;
+    const { workspaceId } = await params;
     if (!currentUserId) throw ErrorTypes.UNAUTHORIZED;
 
     // Ensure the current user is OWNER or EDITOR
@@ -36,7 +36,8 @@ export async function POST(
     }
 
     // Find user by email via Clerk
-    const users = await clerkClient().users.getUserList({ emailAddress: [email] });
+    const client = await clerkClient();
+    const users = await client.users.getUserList({ emailAddress: [email] });
     if (users.data.length === 0) {
       throw new AppError(`User with email "${email}" not found in Clerk`, 404, "USER_NOT_FOUND");
     }
