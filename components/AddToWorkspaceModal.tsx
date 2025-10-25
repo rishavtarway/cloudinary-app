@@ -22,7 +22,7 @@ const AddToLibraryModal: React.FC<AddToLibraryModalProps> = ({ videoId, onClose 
   useEffect(() => {
     const fetchLibraries = async () => {
         const result = await executeWithErrorHandling(async () => {
-            const response = await axios.get("/api/libraries");
+            const response = await axios.get("/api/workspaces");
             return response.data.data;
         });
         if (result) {
@@ -39,7 +39,7 @@ const AddToLibraryModal: React.FC<AddToLibraryModalProps> = ({ videoId, onClose 
     if (!selectedLibrary) return;
 
     await executeWithErrorHandling(async () => {
-        await axios.post(`/api/libraries/${selectedLibrary}/video`, { videoId });
+        await axios.post(`/api/workspaces/${selectedLibrary}/video`, { videoId });
     });
     onClose();
   };
