@@ -20,7 +20,7 @@ import {
 
 const sidebarItems = [
   { href: "/home", icon: LayoutDashboardIcon, label: "Home Page", id: "home-link" },
-  { href: "/shared-libraries", icon: LibraryIcon, label: "Shared Libraries", id: "shared-libraries-link" },
+  { href: "/workspaces", icon: LibraryIcon, label: "Workspaces", id: "workspaces-link" }, // Changed href and label
   { href: "/media-converter", icon: RefreshCwIcon, label: "Media Converter", id: "media-converter-link" },
   { href: "/video-upload", icon: UploadIcon, label: "Video Upload", id: "upload-button" },
 ];

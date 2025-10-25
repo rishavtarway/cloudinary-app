@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { getCldImageUrl, getCldVideoUrl } from "next-cloudinary";
-import { Download, Clock, FileDown, FileUp, Plus, MessageCircle } from "lucide-react";
+import { Download, Clock, FileDown, FileUp, Plus, MessageCircle, Share2 } from "lucide-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { filesize } from "filesize";
@@ -11,12 +11,12 @@ dayjs.extend(relativeTime);
 interface Video {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   publicId: string;
   createdAt: string;
   duration: number;
-  originalSize: number;
-  compressedSize: number;
+  originalSize: number | string;
+  compressedSize: number | string;
 }
 
 const thumbnailSizes = {
@@ -28,59 +28,84 @@ const thumbnailSizes = {
 interface VideoCardProps {
   video: Video;
   onDownload?: (url: string, title: string) => void;
-  onAddToLibrary?: (videoId: string) => void;
-  onComment?: (videoId: string) => void;
+  onAddToWorkspace?: (videoId: string) => void;
+  onComment?: (videoId: string, videoPlayerRef: React.RefObject<HTMLVideoElement>) => void;
+  onShare?: (video: Video) => void;
   thumbnailSize?: keyof typeof thumbnailSizes;
 }
 
-const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, onAddToLibrary, onComment, thumbnailSize = 'medium' }) => {
+const VideoCard: React.FC<VideoCardProps> = ({
+  video,
+  onDownload,
+  onAddToWorkspace,
+  onComment,
+  onShare,
+  thumbnailSize = 'medium'
+}) => {
   const [isHovered, setIsHovered] = useState(false);
   const [previewError, setPreviewError] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const isSmall = thumbnailSize === 'small';
 
   const getThumbnailUrl = useCallback((publicId: string) => {
-    if (!publicId) return undefined;
+    if (!publicId) return "/placeholder-video.png";
     const { width, height } = thumbnailSizes[thumbnailSize];
-    return getCldImageUrl({
-      src: publicId,
-      width,
-      height,
-      crop: "fill",
-      gravity: "auto",
-      format: "jpg",
-      quality: "auto",
-      assetType: "video",
-    });
+    try {
+      return getCldImageUrl({
+        src: publicId, 
+        width, 
+        height, 
+        crop: "fill", 
+        gravity: "auto", 
+        format: "jpg", 
+        quality: "auto", 
+        assetType: "video",
+      });
+    } catch (e) {
+      console.error("Error generating thumbnail URL:", e);
+      return "/placeholder-video.png";
+    }
   }, [thumbnailSize]);
-
-  // FIX 1: Create a variable for the thumbnail URL and provide a fallback image path.
-  // This ensures the `src` prop never receives `undefined`.
-  const thumbnailUrl = getThumbnailUrl(video.publicId) || "/placeholder-video.png";
 
   const getFullVideoUrl = useCallback((publicId: string) => {
     if (!publicId) return undefined;
-    return getCldVideoUrl({
-      src: publicId,
-      width: 1920,
-      height: 1080,
-      assetType: "video",
-    });
+    try {
+      return getCldVideoUrl({ 
+        src: publicId, 
+        assetType: "video" 
+      });
+    } catch (e) { 
+      console.error("Error getting full video URL:", e); 
+      return undefined; 
+    }
   }, []);
 
   const getPreviewVideoUrl = useCallback((publicId: string) => {
     if (!publicId) return undefined;
-    return getCldVideoUrl({
-      src: publicId,
-      width: 400,
-      height: 225,
-      rawTransformations: ["e_preview:duration_15:max_seg_9:min_seg_dur_1"],
-      assetType: "video",
-    });
+    try {
+      return getCldVideoUrl({
+        src: publicId, 
+        width: 400, 
+        height: 225,
+        rawTransformations: ["e_preview:duration_10"],
+        assetType: "video",
+        format: "mp4"
+      });
+    } catch (e) { 
+      console.error("Error getting preview URL:", e); 
+      return undefined; 
+    }
   }, []);
 
-  const formatSize = useCallback((size: number) => {
-    return filesize(size);
+  const formatSize = useCallback((sizeInput: number | string | null | undefined): string => {
+    try {
+      const size = Number(sizeInput);
+      if (isNaN(size) || size <= 0) return 'N/A';
+      return filesize(size);
+    } catch { 
+      return 'N/A'; 
+    }
   }, []);
 
   const formatDuration = useCallback((seconds: number) => {
@@ -89,20 +114,27 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, onAddToLibrary
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   }, []);
 
-  const originalSize = Number(video.originalSize) || 1;
-  const compressedSize = Number(video.compressedSize) || 1;
-  const compressionPercentage = Math.round(
+  // Safely parse sizes
+  const originalSize = Number(video.originalSize) || 0;
+  const compressedSize = Number(video.compressedSize) || 0;
+  const compressionPercentage = originalSize > 0 ? Math.round(
     (1 - compressedSize / originalSize) * 100
-  );
+  ) : 0;
 
   useEffect(() => {
     setPreviewError(false);
-  }, [isHovered]);
+    const player = videoRef.current;
+    if (player) {
+      if (isHovered && !previewError) {
+        player.play().catch(e => console.warn("Autoplay prevented:", e));
+      } else {
+        player.pause();
+      }
+    }
+  }, [isHovered, previewError]);
 
-  const handlePreviewError = () => {
-    console.warn(
-      `Preview failed for video: ${video.title} (${video.publicId})`
-    );
+  const handlePreviewError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    console.warn(`Preview failed for video: ${video.title} (${video.publicId})`, e.nativeEvent);
     setPreviewError(true);
   };
 
@@ -112,127 +144,163 @@ const VideoCard: React.FC<VideoCardProps> = ({ video, onDownload, onAddToLibrary
       onDownload(url, video.title);
     }
   };
-  
-  const handleAddToLibrary = () => {
-    if (onAddToLibrary) {
-      onAddToLibrary(video.id);
+
+  const handleAddToWorkspace = () => {
+    if (onAddToWorkspace) {
+      onAddToWorkspace(video.id);
     }
   };
 
   const handleComment = () => {
     if (onComment) {
-      onComment(video.id);
+      onComment(video.id, videoRef);
     }
   };
 
+  const handleShare = () => {
+    if (onShare) {
+      onShare(video);
+    }
+  };
+
+  const thumbnailUrl = getThumbnailUrl(video.publicId);
+  const previewUrl = getPreviewVideoUrl(video.publicId);
+
   return (
     <div
-      className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300"
+      className={`card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 ${isSmall ? 'text-xs' : ''}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       aria-labelledby={`video-title-${video.id}`}
     >
-      <figure className="aspect-video relative overflow-hidden">
-        <video
-          src={isHovered && !previewError ? getPreviewVideoUrl(video.publicId) : undefined}
-          // Use the new variable for the poster as well
-          poster={thumbnailUrl}
-          autoPlay={isHovered && !previewError}
-          muted
-          loop
-          className={`w-full h-full object-cover transition-opacity duration-300 ${isHovered && !previewError ? 'opacity-100' : 'opacity-0'}`}
-          onError={handlePreviewError}
-          loading="lazy"
-        />
-        <Image
-            // FIX 2: Use the variable with the fallback.
-            src={thumbnailUrl}
-            alt={video.title}
-            // FIX 3: Add the `fill` prop. This is required by Next.js for responsive images in a sized parent.
-            fill
-            // FIX 4: The className `w-full h-full` is now redundant because `fill` is used.
-            // The `absolute inset-0` is also handled by `fill`.
-            className={`object-cover transition-opacity duration-300 ${isHovered && !previewError ? 'opacity-0' : 'opacity-100'}`}
-            loading="lazy"
-            // FIX 5: The previous onError handler won't work correctly with next/image.
-            // The fallback in `thumbnailUrl` handles missing IDs, which is the most common case.
-        />
-
-        {previewError && isHovered && (
-             <div className="w-full h-full flex items-center justify-center bg-base-300">
-              <div className="text-center">
-                <p className="text-error text-sm">Preview unavailable</p>
-              </div>
-            </div>
+      <figure className="aspect-video relative overflow-hidden bg-black group">
+        {/* Preview Video Layer */}
+        {previewUrl && !previewError && (
+          <video
+            ref={videoRef}
+            src={previewUrl}
+            poster={thumbnailUrl}
+            muted
+            loop
+            playsInline
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+              isHovered ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
+            onError={handlePreviewError}
+            preload="none"
+          />
         )}
 
-        <div className={`absolute bottom-2 right-2 bg-base-100 bg-opacity-70 px-2 py-1 rounded-lg flex items-center ${isSmall ? 'text-xs px-1 py-0.5' : 'text-sm'}`}>
-          <Clock size={isSmall ? 12 : 16} className="mr-1" />
+        {/* Static Thumbnail Image Layer */}
+        <Image
+          src={thumbnailUrl}
+          alt={video.title}
+          fill
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          className={`object-cover transition-opacity duration-300 ${
+            isHovered && !previewError ? 'opacity-0' : 'opacity-100 z-0'
+          }`}
+          priority={false}
+          unoptimized={thumbnailUrl === "/placeholder-video.png"}
+        />
+
+        {/* Error Overlay */}
+        {previewError && isHovered && (
+          <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-base-300 z-20">
+            <div className="text-center p-2">
+              <p className="text-error text-sm">Preview unavailable</p>
+            </div>
+          </div>
+        )}
+
+        {/* Duration Badge */}
+        <div className={`absolute bottom-2 right-2 bg-black bg-opacity-60 text-white px-1.5 py-0.5 rounded text-xs flex items-center z-20 ${
+          isSmall ? 'text-[10px] px-1' : ''
+        }`}>
+          <Clock size={isSmall ? 10 : 12} className="mr-1" />
           {formatDuration(video.duration)}
         </div>
       </figure>
 
-      {isSmall ? (
-        <div className="card-body p-2">
-          <h2 id={`video-title-${video.id}`} className="card-title text-sm font-bold truncate" title={video.title}>{video.title}</h2>
-          <div className="flex justify-between items-center mt-1">
-            <div className="text-xs font-semibold">
+      {/* Card Body */}
+      <div className={`card-body ${isSmall ? 'p-2' : 'p-4'}`}>
+        <h2 
+          id={`video-title-${video.id}`} 
+          className={`card-title font-bold truncate ${isSmall ? 'text-sm' : 'text-lg'}`} 
+          title={video.title}
+        >
+          {video.title}
+        </h2>
+
+        {!isSmall && (
+          <>
+            <p className="text-sm text-base-content/70 mb-2 truncate" title={video.description}>
+              {video.description || "No description"}
+            </p>
+            <p className="text-xs text-base-content/60 mb-4">
+              Uploaded {dayjs(video.createdAt).fromNow()}
+            </p>
+            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+              <div className="flex items-center gap-2">
+                <FileUp size={18} className="text-primary flex-shrink-0" />
+                <div>
+                  <div className="font-semibold">Original</div>
+                  <div className="text-xs opacity-80">{formatSize(originalSize)}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <FileDown size={18} className="text-secondary flex-shrink-0" />
+                <div>
+                  <div className="font-semibold">Compressed</div>
+                  <div className="text-xs opacity-80">{formatSize(compressedSize)}</div>
+                </div>
+              </div>
+            </div>
+            <div className="text-sm font-semibold mb-3">
+              Compression:{" "}
               <span className="text-accent">{compressionPercentage}% savings</span>
             </div>
-            <div>
-              <button className="btn btn-ghost btn-xs btn-circle" onClick={handleDownload} aria-label={`Download ${video.title}`}>
-                <Download size={14} />
-              </button>
-              <button className="btn btn-ghost btn-xs btn-circle" onClick={handleAddToLibrary} aria-label={`Add ${video.title} to a library`}>
-                <Plus size={14} />
-              </button>
-            </div>
+          </>
+        )}
+
+        {isSmall && (
+          <div className="text-xs font-semibold mt-1">
+            <span className="text-accent">{compressionPercentage}% savings</span>
           </div>
+        )}
+
+        <div className="card-actions justify-end items-center">
+          <button 
+            className={`btn btn-ghost btn-circle ${isSmall ? 'btn-xs' : 'btn-sm'}`} 
+            onClick={handleComment} 
+            title="Comments"
+          >
+            <MessageCircle size={isSmall ? 14 : 16} />
+          </button>
+          <button 
+            className={`btn btn-ghost btn-circle ${isSmall ? 'btn-xs' : 'btn-sm'}`} 
+            onClick={handleAddToWorkspace} 
+            title="Add to Workspace"
+          >
+            <Plus size={isSmall ? 14 : 16} />
+          </button>
+          <button 
+            className={`btn btn-ghost btn-circle ${isSmall ? 'btn-xs' : 'btn-sm'}`} 
+            onClick={handleShare} 
+            title="Share Video"
+          >
+            <Share2 size={isSmall ? 14 : 16} />
+          </button>
+          <button 
+            className={`btn ${isSmall ? 'btn-ghost btn-xs btn-circle' : 'btn-primary btn-sm'}`} 
+            onClick={handleDownload} 
+            title="Download Video"
+          >
+            <Download size={isSmall ? 14 : 16} />
+            {!isSmall && <span className="ml-1">Download</span>}
+          </button>
         </div>
-      ) : (
-        <div className="card-body p-4">
-          <h2 id={`video-title-${video.id}`} className="card-title text-lg font-bold">{video.title}</h2>
-          <p className="text-sm text-base-content opacity-70 mb-2 truncate">
-            {video.description}
-          </p>
-          <p className="text-xs text-base-content opacity-60 mb-4">
-            Uploaded {dayjs(video.createdAt).fromNow()}
-          </p>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center">
-              <FileUp size={18} className="mr-2 text-primary" />
-              <div>
-                <div className="font-semibold">Original</div>
-                <div>{formatSize(originalSize)}</div>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <FileDown size={18} className="mr-2 text-secondary" />
-              <div>
-                <div className="font-semibold">Compressed</div>
-                <div>{formatSize(compressedSize)}</div>
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-between items-center mt-4">
-            <div className="text-sm font-semibold">
-              Compression:{" "}
-              <span className="text-accent">{compressionPercentage}%</span>
-            </div>
-            <div>
-                <button className="btn btn-primary btn-sm mr-2" onClick={handleDownload} aria-label={`Download ${video.title}`}>
-                    <Download size={16} />
-                </button>
-                <button className="btn btn-secondary btn-sm" onClick={handleAddToLibrary} aria-label={`Add ${video.title} to a library`}>
-                    <Plus size={16} />
-                </button>
-                <button className="btn btn-info btn-sm ml-2" onClick={handleComment} aria-label={`View comments for ${video.title}`}>
-                <MessageCircle size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 };
