@@ -1,10 +1,10 @@
 
-# 🚀 AI-Powered SaaS for Media Optimization
+# AI-Powered SaaS for Media Optimization
 
-## 📌 Overview
+##  Overview
 This project is a cutting-edge AI-powered SaaS application designed for real-time media optimization. Built with Next.js and Cloudinary, it enhances media performance by reducing file sizes while maintaining high quality. The platform ensures seamless authentication, fast file conversions, and effortless media sharing across platforms.
 
-## ✨ Features
+##  Features
 - 🔹 **AI-Driven Media Optimization** – Enhances image and video quality dynamically while reducing file sizes.
 - 🔹 **Secure Authentication** – Implements robust, multi-layered authentication with Clerk for enhanced security.
 - 🔹 **Lightning-Fast File Conversion** – Automates format migration with a 30% boost in processing speed.
@@ -12,7 +12,7 @@ This project is a cutting-edge AI-powered SaaS application designed for real-tim
 - 🔹 **Advanced Video Management** – Supports high-performance video uploads, metadata handling, and an optimized homepage display.
 - 🔹 **High-Efficiency Compression** – Reduces video file sizes by up to 45% without significant quality loss.
 
-## 🛠 Tech Stack
+##  Tech Stack
 - **Frontend & Framework**: Next.js
 - **Authentication**: Clerk
 - **Database & ORM**: MongoDB, Prisma
@@ -22,14 +22,14 @@ This project is a cutting-edge AI-powered SaaS application designed for real-tim
   - 📅 `dayjs` (for date/time handling)
   - 📂 `filesize` (for file size calculations)
 
-## 🚀 Getting Started
+##  Getting Started
 ### Prerequisites
 Ensure you have the following installed:
 - ✅ Node.js (>= 16.x)
 - ✅ npm or yarn
 - ✅ MongoDB instance
 
-### 🔧 Installation
+###  Installation
 1. **Clone the repository:**
    ```sh
    git clone https://github.com/your-repo-url.git
@@ -58,9 +58,9 @@ Ensure you have the following installed:
    yarn dev
    ```
 
-## 🎯 Usage
+##  Usage
 1. 🔑 Sign up or log in using Clerk authentication.
-2. 📤 Upload images or videos to optimize and convert them.
+2.  Upload images or videos to optimize and convert them.
 3. 🔄 Download or share the optimized media effortlessly across platforms.
 
 
